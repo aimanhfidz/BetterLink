@@ -75,6 +75,8 @@ const state = {
   socials: [],
   events: [],
   drafts: [],
+  draftFilter: 'all',
+  editingDraft: null,
   viewSlug: null
 };
 
@@ -214,26 +216,77 @@ function renderStats(){
   }).join('') : `<div class="empty">No traffic recorded yet. Share your page and check back.</div>`;
 }
 
-/* ── Rendering: Threads studio ────────────────────────────────────── */
+/* ── Rendering: Threads drafts ────────────────────────────────────── */
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const THREADS_LIMIT = 500;   // Threads' per-post character ceiling
+
+function draftFilters(){
+  const n = k => k === 'all' ? state.drafts.length : state.drafts.filter(d => d.status === k).length;
+  $('#draftFilters').innerHTML = [['all','All'],['draft','Drafts'],['posted','Posted']]
+    .map(([k,label]) => `<button class="filter${state.draftFilter===k?' on':''}" data-filter="${k}">${label} ${n(k)}</button>`)
+    .join('');
+}
+
+function visibleDrafts(){
+  return state.draftFilter === 'all'
+    ? state.drafts
+    : state.drafts.filter(d => d.status === state.draftFilter);
+}
+
 function renderDrafts(){
-  $('#draftCount').textContent = state.drafts.length ? state.drafts.length + ' total' : '';
-  $('#drafts').innerHTML = state.drafts.length ? state.drafts.map(d => `
-    <div class="draft" data-did="${d.id}">
+  draftFilters();
+  const list = visibleDrafts();
+  $('#draftCount').textContent = list.length ? list.length + ' shown' : '';
+
+  const unposted = state.drafts.filter(d => d.status === 'draft').length;
+  const dot = $('#draftDot');
+  dot.hidden = !unposted;
+  dot.textContent = unposted > 99 ? '99+' : unposted;
+
+  $('#drafts').innerHTML = list.length ? list.map(d => {
+    const editing = state.editingDraft === d.id;
+    const len = (d.hook || '').length + (d.body || '').length + 2;
+    return `
+    <div class="draft${editing?' editing':''}" data-did="${d.id}">
       <div class="draft-top">
         ${d.pillar ? `<span class="tag pillar">${esc(d.pillar)}</span>` : ''}
         ${d.day ? `<span class="tag day">${esc(d.day)}</span>` : ''}
         <span class="tag${d.status === 'posted' ? ' posted' : ''}">${esc(d.status)}</span>
         ${d.posted_date ? `<span class="tag">${esc(d.posted_date)}</span>` : ''}
       </div>
-      <div class="hook">${esc(d.hook)}</div>
-      <div class="body">${esc(d.body)}</div>
-      <div class="acts">
-        <button class="btn ghost" data-act="copy">Copy</button>
-        <button class="btn ${d.status === 'posted' ? 'ghost' : 'lime'}" data-act="status">
-          ${d.status === 'posted' ? 'Mark as draft' : 'Mark as posted'}
-        </button>
-      </div>
-    </div>`).join('') : `<div class="empty"><strong>No drafts</strong>Drafts you own will appear here.</div>`;
+      ${editing ? `
+        <div class="meta-row">
+          <div class="field"><label>Pillar</label><input class="input" data-df="pillar" value="${esc(d.pillar)}" placeholder="Pillar"></div>
+          <div class="field" style="flex:0 0 108px"><label>Day</label>
+            <select class="input" data-df="day">
+              <option value=""${!d.day?' selected':''}>—</option>
+              ${DAYS.map(x=>`<option value="${x}"${x===d.day?' selected':''}>${x}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Hook</label><textarea class="input" data-df="hook" placeholder="The first line that stops the scroll">${esc(d.hook)}</textarea></div>
+        <div class="field" style="margin-bottom:4px"><label>Body</label><textarea class="input big" data-df="body" placeholder="The rest of the post">${esc(d.body)}</textarea></div>
+        <div class="char${len > THREADS_LIMIT ? ' over' : ''}">${len} / ${THREADS_LIMIT}</div>
+        <div class="acts">
+          <button class="btn lime" data-act="done">Done</button>
+          <button class="btn danger" data-act="del">Delete</button>
+        </div>
+      ` : `
+        <div class="hook">${esc(d.hook) || '<span style="opacity:.4">No hook yet</span>'}</div>
+        <div class="body">${esc(d.body)}</div>
+        <div class="char${len > THREADS_LIMIT ? ' over' : ''}">${len} / ${THREADS_LIMIT}</div>
+        <div class="acts">
+          <button class="btn ghost" data-act="copy">Copy</button>
+          <button class="btn ghost" data-act="edit">Edit</button>
+          <button class="btn ${d.status === 'posted' ? 'ghost' : 'lime'}" data-act="status">
+            ${d.status === 'posted' ? 'Unpost' : 'Mark posted'}
+          </button>
+        </div>
+      `}
+    </div>`;
+  }).join('') : `<div class="empty"><strong>Nothing here</strong>${
+    state.draftFilter === 'all' ? 'Tap + to write your first draft.' : 'No drafts with this status.'
+  }</div>`;
 }
 
 /* ── Rendering: editor ────────────────────────────────────────────── */
@@ -539,24 +592,73 @@ $$('[data-collapse]').forEach(h => h.addEventListener('click', () => {
   $('#chev-'+h.dataset.collapse).classList.toggle('open', c.classList.contains('open'));
 }));
 
-/* ── Threads studio wiring ────────────────────────────────────────── */
+/* ── Threads drafts wiring ────────────────────────────────────────── */
+$('#btnThreads').addEventListener('click', () => show('threads'));
+$('#btnBack').addEventListener('click', () => show('links'));
+
+$('#draftFilters').addEventListener('click', e => {
+  const b = e.target.closest('[data-filter]'); if (!b) return;
+  state.draftFilter = b.dataset.filter;
+  state.editingDraft = null;
+  renderDrafts();
+});
+
+$('#btnAddDraft').addEventListener('click', async () => {
+  const { data, error } = await sb.from('drafts').insert({
+    user_id: state.session.user.id, pillar: '', hook: '', body: '', status: 'draft'
+  }).select().single();
+  if (error) return toast('Could not add: ' + error.message);
+  state.drafts.unshift(data);
+  state.draftFilter = 'all';
+  state.editingDraft = data.id;
+  renderDrafts();
+  $(`.draft[data-did="${data.id}"]`)?.scrollIntoView({ behavior:'smooth', block:'center' });
+});
+
 $('#drafts').addEventListener('click', async e => {
   const row = e.target.closest('.draft[data-did]'); if (!row) return;
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   const d = state.drafts.find(x => x.id === row.dataset.did); if (!d) return;
+  const act = btn.dataset.act;
 
-  if (btn.dataset.act === 'copy'){
-    try { await navigator.clipboard.writeText(`${d.hook}\n\n${d.body}`); toast('Draft copied'); }
+  if (act === 'copy'){
+    const text = [d.hook, d.body].filter(Boolean).join('\n\n');
+    try { await navigator.clipboard.writeText(text); toast('Draft copied'); }
     catch { toast('Copy failed'); }
     return;
   }
-  if (btn.dataset.act === 'status'){
+  if (act === 'edit'){ state.editingDraft = d.id; renderDrafts(); return; }
+  if (act === 'done'){ state.editingDraft = null; renderDrafts(); return; }
+  if (act === 'del'){
+    if (!confirm('Delete this draft?')) return;
+    const { error } = await sb.from('drafts').delete().eq('id', d.id);
+    if (error) return toast('Delete failed: ' + error.message);
+    state.drafts = state.drafts.filter(x => x.id !== d.id);
+    state.editingDraft = null; renderDrafts(); toast('Deleted');
+    return;
+  }
+  if (act === 'status'){
     const next = d.status === 'posted' ? 'draft' : 'posted';
     const patch = { status: next, posted_date: next === 'posted' ? today() : null };
     const { error } = await sb.from('drafts').update(patch).eq('id', d.id);
     if (error) return toast('Could not update: ' + error.message);
-    Object.assign(d, patch); renderDrafts(); toast(next === 'posted' ? 'Marked as posted' : 'Back to draft');
+    Object.assign(d, patch); renderDrafts();
+    toast(next === 'posted' ? 'Marked as posted' : 'Back to draft');
   }
+});
+
+$('#drafts').addEventListener('input', e => {
+  const row = e.target.closest('.draft[data-did]');
+  const f = e.target.dataset.df; if (!row || !f) return;
+  const d = state.drafts.find(x => x.id === row.dataset.did); if (!d) return;
+  d[f] = e.target.value;
+  if (f === 'hook' || f === 'body'){
+    const len = (d.hook||'').length + (d.body||'').length + 2;
+    const c = row.querySelector('.char');
+    c.textContent = `${len} / ${THREADS_LIMIT}`;
+    c.classList.toggle('over', len > THREADS_LIMIT);
+  }
+  queueSave('drafts', d.id, { [f]: e.target.value || (f === 'day' ? null : '') });
 });
 $('#btnDraftsRefresh').addEventListener('click', async () => {
   const { data } = await sb.from('drafts').select('*').order('created_at', { ascending:false });
@@ -670,5 +772,13 @@ async function boot(){
 sb.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_IN' && $('#gate').classList.contains('on')) location.replace(location.pathname);
 });
+
+/* Local-only preview hook: lets a dev render the owner UI against fixture
+   data without a session. Gated to localhost, and harmless if it ever leaked —
+   row-level security is enforced server-side, so seeding client state grants
+   no access to anything the database wouldn't already hand over. */
+if (location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
+  window.__betterlink = { state, show, renderDrafts, renderLinks, renderStats, renderEdit };
+}
 
 boot();

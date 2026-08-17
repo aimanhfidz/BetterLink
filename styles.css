@@ -345,3 +345,27 @@ textarea.input{resize:vertical;min-height:76px;line-height:1.45}
 .made b{color:var(--ink-mid);font-weight:700}
 body.public .nav{display:none}
 body.public .screen{padding-bottom:28px}
+
+/* ── Topbar threads button + unread dot ───────────────────────────── */
+.icon-btn{position:relative}
+.icon-btn .dot{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;
+  border-radius:99px;background:var(--pink);color:var(--on-color);font-size:9.5px;
+  font-weight:800;display:grid;place-items:center;padding:0 4px;border:2px solid var(--bg)}
+body.public .owner-only{display:none}
+
+/* ── Filter chips ─────────────────────────────────────────────────── */
+.filters{display:flex;gap:7px;margin:4px 2px 0;flex-wrap:wrap}
+.filter{padding:8px 14px;border-radius:99px;font-size:12.5px;font-weight:700;
+  background:var(--surface);border:1px solid var(--line);color:var(--ink-dim);
+  transition:background .18s,color .18s}
+.filter:hover{background:var(--surface-2)}
+.filter.on{background:var(--ink);color:var(--on-color);border-color:transparent}
+
+/* ── Draft editing ────────────────────────────────────────────────── */
+.draft.editing{border-color:var(--lime)}
+.draft .meta-row{display:flex;gap:9px}
+.draft .meta-row .field{flex:1;margin-bottom:11px}
+.draft textarea.input{min-height:64px}
+.draft textarea.input.big{min-height:132px}
+.char{font-size:11px;color:var(--ink-dim);text-align:right;margin-top:5px;font-variant-numeric:tabular-nums}
+.char.over{color:#FF5A5A;font-weight:700}
