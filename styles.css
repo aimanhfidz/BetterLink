@@ -387,3 +387,12 @@ body.public .owner-only{display:none}
 
 /* [hidden] must beat explicit display rules (.section-title is display:flex). */
 [hidden]{display:none!important}
+
+/* ── AI draft panel ───────────────────────────────────────────────── */
+.ai-panel{margin:12px 0 4px;border-color:var(--lime)}
+.ai-panel textarea.input{min-height:76px}
+.ai-note{font-size:12px;color:var(--ink-dim);line-height:1.5;margin-top:10px}
+.ai-note.err{color:#FF5A5A}
+.btn[disabled]{opacity:.55;cursor:default}
+.icon-btn.on{background:var(--lime);border-color:transparent}
+.icon-btn.on svg{stroke:var(--on-color);fill:var(--on-color)}

@@ -628,6 +628,60 @@ $('#draftFilters').addEventListener('click', e => {
   renderDrafts();
 });
 
+/* ── AI drafting ──────────────────────────────────────────────────── */
+$('#btnAi').addEventListener('click', () => {
+  const panel = $('#aiPanel');
+  panel.hidden = !panel.hidden;
+  $('#btnAi').classList.toggle('on', !panel.hidden);
+  if (!panel.hidden) $('#aiTopic').focus();
+});
+
+$('#aiGo').addEventListener('click', async () => {
+  const topic = $('#aiTopic').value.trim();
+  const note = $('#aiNote');
+  if (topic.length < 3){ note.className = 'ai-note err'; note.textContent = 'Give it something to work with first.'; return; }
+
+  $('#aiGo').disabled = true;
+  $('#aiGo').textContent = 'Writing…';
+  note.className = 'ai-note';
+  note.textContent = 'Thinking… this takes a few seconds.';
+
+  try {
+    /* The key lives on the server; invoke() forwards the session JWT so the
+       function can scope voice and quota to this user. */
+    const { data, error } = await sb.functions.invoke('generate-draft', { body: { topic } });
+    if (error) throw new Error(error.message || 'Request failed');
+    if (data?.error) throw new Error(data.error);
+
+    const { data: created, error: insErr } = await sb.from('drafts').insert({
+      user_id: state.session.user.id,
+      pillar: data.pillar || '',
+      hook: data.hook || '',
+      body: data.body || '',
+      status: 'draft'
+    }).select().single();
+    if (insErr) throw insErr;
+
+    state.drafts.unshift(created);
+    state.draftFilter = 'all';
+    state.editingDraft = created.id;
+    renderDrafts();
+    $('#aiTopic').value = '';
+    $('#aiPanel').hidden = true;
+    $('#btnAi').classList.remove('on');
+    $(`.draft[data-did="${created.id}"]`)?.scrollIntoView({ behavior:'smooth', block:'center' });
+    toast(typeof data.remaining_today === 'number'
+      ? `Draft ready · ${data.remaining_today} left today`
+      : 'Draft ready');
+  } catch (err){
+    note.className = 'ai-note err';
+    note.textContent = err.message || 'Generation failed. Try again.';
+  } finally {
+    $('#aiGo').disabled = false;
+    $('#aiGo').textContent = 'Write a draft';
+  }
+});
+
 $('#btnAddDraft').addEventListener('click', async () => {
   const { data, error } = await sb.from('drafts').insert({
     user_id: state.session.user.id, pillar: '', hook: '', body: '', status: 'draft'
