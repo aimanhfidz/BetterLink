@@ -773,12 +773,4 @@ sb.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_IN' && $('#gate').classList.contains('on')) location.replace(location.pathname);
 });
 
-/* Local-only preview hook: lets a dev render the owner UI against fixture
-   data without a session. Gated to localhost, and harmless if it ever leaked —
-   row-level security is enforced server-side, so seeding client state grants
-   no access to anything the database wouldn't already hand over. */
-if (location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
-  window.__betterlink = { state, show, renderDrafts, renderLinks, renderStats, renderEdit };
-}
-
 boot();
