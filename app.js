@@ -14,7 +14,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 const COLORS = ['dark','lime','pink','blue','yellow','cream','cocoa'];
 const ACCENTS = ['pink','lime','blue','yellow'];
 const HEX = { dark:'#2A2A2A', lime:'#5CE65C', pink:'#FF52A8', blue:'#2D7FF9', yellow:'#F0EC3D',
-              cream:'#E7D3A6', cocoa:'#5E3F2A' };
+              cream:'#EBD7A8', cocoa:'#A2663A' };
 
 const ICONS = {
   link:'<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7L12 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
