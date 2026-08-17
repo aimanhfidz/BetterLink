@@ -236,7 +236,7 @@ function renderStats(){
 
 /* ── Rendering: Threads drafts ────────────────────────────────────── */
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const THREADS_LIMIT = 500;   // Threads' per-post character ceiling
+const THREADS_LIMIT = 1200;  // Aiman's posts run ~700-1200 chars; counter warns past that
 
 function draftFilters(){
   const n = k => k === 'all' ? state.drafts.length : state.drafts.filter(d => d.status === k).length;
@@ -702,8 +702,31 @@ $('#drafts').addEventListener('click', async e => {
 
   if (act === 'copy'){
     const text = [d.hook, d.body].filter(Boolean).join('\n\n');
-    try { await navigator.clipboard.writeText(text); toast('Draft copied'); }
-    catch { toast('Copy failed'); }
+    let ok = true;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      /* Clipboard API needs a secure context and permission; the textarea
+         fallback keeps one-click copy working where it's unavailable. */
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        ta.remove();
+      } catch { ok = false; }
+    }
+    if (ok){
+      const label = btn.textContent;
+      btn.textContent = 'Copied ✓';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = label; btn.classList.remove('copied'); }, 1800);
+    } else {
+      toast('Copy failed');
+    }
     return;
   }
   if (act === 'edit'){ state.editingDraft = d.id; renderDrafts(); return; }
