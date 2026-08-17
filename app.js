@@ -801,6 +801,28 @@ $('#btnSignOut').addEventListener('click', async () => {
 });
 
 /* ── Auth gate ────────────────────────────────────────────────────── */
+$('#gGoogle').addEventListener('click', async () => {
+  $('#gGoogle').disabled = true;
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: location.origin + '/' }
+  });
+  /* On success the browser navigates away, so reaching here means it failed. */
+  if (error){
+    $('#gGoogle').disabled = false;
+    $('#gNote').textContent = error.message.includes('provider')
+      ? 'Google sign-in is not enabled on this project yet.'
+      : error.message;
+  }
+});
+
+$('#gToggleEmail').addEventListener('click', () => {
+  const block = $('#gEmailBlock');
+  block.hidden = !block.hidden;
+  $('#gToggleEmail').textContent = block.hidden ? 'Use email instead' : 'Use Google instead';
+  if (!block.hidden) $('#gEmail').focus();
+});
+
 $('#gSend').addEventListener('click', async () => {
   const email = $('#gEmail').value.trim();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast('Enter a valid email');

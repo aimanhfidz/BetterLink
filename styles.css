@@ -397,3 +397,10 @@ body.public .owner-only{display:none}
 .icon-btn.on{background:var(--lime);border-color:transparent}
 .icon-btn.on svg{stroke:var(--on-color);fill:var(--on-color)}
 .btn.copied{background:var(--lime);color:var(--on-color);border-color:transparent}
+
+/* ── Google sign-in ───────────────────────────────────────────────── */
+.btn.google{background:#fff;color:#1F1F1F;font-weight:600}
+.btn.google svg{width:18px;height:18px;flex:none}
+.link-btn{display:block;width:100%;text-align:center;margin-top:12px;
+  font-size:13px;font-weight:600;color:var(--ink-dim);padding:6px}
+.link-btn:hover{color:var(--ink)}
