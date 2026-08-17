@@ -1,9 +1,10 @@
 # BetterLink
 
-A personal master-link page — one URL that holds everything you publish.
+A personal master-link page — one URL that holds everything you publish —
+with the Threads drafting tool merged in as a second workspace.
 
 Dark, neon-accented UI: colour-blocked link cards, a featured slot, real click
-analytics, and a Threads drafting studio folded in as a second workspace.
+analytics, and a drafts studio behind the topbar Threads button.
 
 ## How it works
 
@@ -11,19 +12,32 @@ Two modes off the same static bundle:
 
 | URL | Mode | Who |
 |---|---|---|
-| `/` | Owner console — edit, analytics, Threads studio | You, signed in |
-| `/?u=<slug>` | Public link page | Anyone |
+| `/` | Owner console — links, analytics, Threads drafts, edit | You, signed in |
+| `/u/<slug>` | Public link page | Anyone |
+| `/?u=<slug>` | Public page, legacy form — kept so shared links survive | Anyone |
 
 No build step. Three files: `index.html`, `styles.css`, `app.js`.
 
+`/u/<slug>` depends on the rewrite in `vercel.json`. Two things that go with it:
+
+- Asset paths must stay **root-absolute** (`/styles.css`, `/app.js`). Relative
+  paths resolve against `/u/` and 404.
+- Do not re-enable `cleanUrls`. It rewrites `/index.html` to `/`, which
+  collides with a rewrite whose destination is `/index.html`, and `/u/<slug>`
+  starts 404ing in production while still working locally.
+
 ## Data
 
-Postgres on Supabase, project `aiman-threads-drafts` (`lnhnloppfqgveuhsfiwm`).
+Postgres on Supabase, project ref `lnhnloppfqgveuhsfiwm`. The project is still
+named `aiman-threads-drafts` for historical reasons — it now backs all of
+BetterLink, which is the main app; the Threads tool folded into it.
 
 - `link_pages` — one public page per user (slug, name, bio, accent, published)
 - `links` — the cards, ordered by `sort_order`
 - `link_socials` — the icon row
 - `link_events` — append-only view/click log
+- `drafts` — Threads posts (pillar, day, hook, body, status)
+- `profiles`, `pillars` — private brand strategy, owner-only
 
 Row-level security is the whole security model:
 
@@ -41,15 +55,32 @@ protects the data, not the key.
 
 ## Sign-in
 
-Passwordless email link (Supabase Auth). Add your deployment origin to
-**Authentication → URL Configuration → Redirect URLs** in the Supabase
-dashboard, or the emailed link will bounce back to localhost.
+Passwordless email link (Supabase Auth). In **Authentication → URL
+Configuration**, set:
+
+- **Site URL** — the deployment origin, no wildcard
+- **Redirect URLs** — `https://<host>/**`, plus `http://localhost:4173/**` for
+  local work
+
+The app sends `emailRedirectTo: location.origin + '/'`. The trailing slash is
+deliberate: redirect entries are matched as globs and a bare origin does not
+reliably match a `/**` pattern.
+
+## Local development
+
+    node dev-server.js ./BetterLink 4173
+
+The dev server mirrors the `/u/:slug` rewrite. It does **not** mirror every
+Vercel behaviour, so routing changes are worth re-checking against a real
+deployment before trusting them.
 
 ## Known gaps
 
 - `link_events` accepts anonymous inserts, so click counts are inflatable by
   anyone who scripts against the endpoint. Fine for personal analytics; add a
   rate limit or an edge function before trusting it commercially.
-- The 14 rows in `drafts` predate auth and have `user_id = NULL`, which no RLS
-  policy can match — they are invisible to every client. They need to be
-  assigned an owner before the Threads studio will show them.
+- `/u/<unknown-slug>` returns HTTP 200 with a client-rendered "not found"
+  message, not a real 404 status. Fine for humans, wrong for crawlers.
+- Analytics load the last 60 days of events and aggregate in the browser.
+  That's fine at personal scale and should become a SQL rollup well before it
+  reaches five figures of events.
