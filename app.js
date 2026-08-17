@@ -44,6 +44,16 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const today = () => new Date().toISOString().slice(0,10);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+/* A page can be addressed two ways. /u/<slug> is the canonical pretty form
+   (vercel.json rewrites it to index.html); ?u=<slug> is kept working so any
+   link already shared stays valid. */
+function readSlug(){
+  const m = location.pathname.match(/^\/u\/([^/?#]+)\/?$/);
+  if (m) return decodeURIComponent(m[1]);
+  return new URLSearchParams(location.search).get('u');
+}
+const publicUrlFor = slug => `${location.origin}/u/${encodeURIComponent(slug)}`;
+
 function safeURL(u){
   const s = String(u||'').trim();
   if(!s) return '';
@@ -305,7 +315,7 @@ function renderEdit(){
   $('#swPublish').classList.toggle('on', pub);
   $('#swPublish').setAttribute('aria-checked', String(pub));
   $('#pubSub').textContent = pub ? 'Live — anyone with the link can see it' : 'Hidden — only you can see it';
-  $('#publicUrl').textContent = p.slug ? `${location.origin}/?u=${p.slug}` : 'Set a page address first';
+  $('#publicUrl').textContent = p.slug ? publicUrlFor(p.slug) : 'Set a page address first';
   $('#editCount').textContent = state.links.length + ' total';
   $('#acctLine').textContent = state.session?.user?.email
     ? `Signed in as ${state.session.user.email}`
@@ -558,7 +568,7 @@ $('#fSlug').addEventListener('change', async e => {
     return toast(error.code === '23505' ? 'That address is taken' : 'Could not save: ' + error.message);
   }
   state.page.slug = s; e.target.value = s;
-  $('#publicUrl').textContent = `${location.origin}/?u=${s}`;
+  $('#publicUrl').textContent = publicUrlFor(s);
   toast('Address updated');
 });
 
@@ -582,7 +592,7 @@ $('#swPublish').addEventListener('click', async () => {
 
 $('#btnCopyUrl').addEventListener('click', async () => {
   if (!state.page?.slug) return toast('Set a page address first');
-  try { await navigator.clipboard.writeText(`${location.origin}/?u=${state.page.slug}`); toast('Public URL copied'); }
+  try { await navigator.clipboard.writeText(publicUrlFor(state.page.slug)); toast('Public URL copied'); }
   catch { toast('Copy failed'); }
 });
 
@@ -675,7 +685,7 @@ $('#btnRefresh').addEventListener('click', async () => {
 /* ── Share ────────────────────────────────────────────────────────── */
 $('#btnShare').addEventListener('click', async () => {
   const url = state.page?.slug && state.mode === 'owner'
-    ? `${location.origin}/?u=${state.page.slug}` : location.href;
+    ? publicUrlFor(state.page.slug) : location.href;
   try {
     if (navigator.share){ await navigator.share({ title:'BetterLink', url }); return; }
     await navigator.clipboard.writeText(url); toast('Link copied');
@@ -720,7 +730,7 @@ try { if (sessionStorage.getItem('bl.splash')) $('#splash').classList.add('gone'
 
 /* ── Boot ─────────────────────────────────────────────────────────── */
 async function boot(){
-  const slug = new URLSearchParams(location.search).get('u');
+  const slug = readSlug();
 
   if (slug){
     /* Public visitor mode: no nav, no editing, no auth required. */
@@ -732,7 +742,7 @@ async function boot(){
     try {
       const page = await loadPublicPage(slug);
       if (!page){
-        $('#links').innerHTML = `<div class="empty"><strong>Page not found</strong>Nothing is published at /?u=${esc(slug)}</div>`;
+        $('#links').innerHTML = `<div class="empty"><strong>Page not found</strong>Nothing is published at ${esc(location.pathname + location.search)}</div>`;
         $('#pName').textContent = 'Not found'; $('#pHandle').textContent = '';
         setChip('err','404');
         return;
