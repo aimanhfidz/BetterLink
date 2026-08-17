@@ -369,3 +369,18 @@ body.public .owner-only{display:none}
 .draft textarea.input.big{min-height:132px}
 .char{font-size:11px;color:var(--ink-dim);text-align:right;margin-top:5px;font-variant-numeric:tabular-nums}
 .char.over{color:#FF5A5A;font-weight:700}
+
+/* ── Warm card colours (tiramisu: mascarpone + dusted cocoa) ──────── */
+:root{ --cream:#E7D3A6; --cocoa:#5E3F2A; }
+.link-card.c-cream{background:var(--cream);border-color:transparent;color:#3B2A1C}
+.link-card.c-cocoa{background:var(--cocoa);border-color:transparent;color:#F5E6CE}
+.link-card.c-cream .lc-icon{background:rgba(59,42,28,.12)}
+.link-card.c-cocoa .lc-icon{background:rgba(245,230,206,.16)}
+.link-card.c-cream .pill{background:rgba(59,42,28,.14)}
+.link-card.c-cocoa .pill{background:rgba(245,230,206,.18)}
+.link-card.c-cream .bar{background:rgba(59,42,28,.18)}
+.link-card.c-cream .bar i{background:#3B2A1C}
+.link-card.c-cocoa .bar{background:rgba(245,230,206,.2)}
+.link-card.c-cocoa .bar i{background:#F5E6CE}
+.sw[data-c=cream]{background:var(--cream)}
+.sw[data-c=cocoa]{background:var(--cocoa)}
