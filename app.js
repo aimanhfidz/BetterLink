@@ -148,6 +148,13 @@ function renderLinks(){
   const feat = visible.filter(l => l.featured);
   const rest = visible.filter(l => !l.featured);
 
+  /* Visitors should never see empty scaffolding: with nothing featured the
+     whole section disappears publicly, while the owner keeps the hint that
+     explains where featuring happens. */
+  const hideFeatured = !feat.length && state.mode === 'public';
+  $('#featHead').hidden = hideFeatured;
+  $('#featured').hidden = hideFeatured;
+
   $('#featCount').textContent = feat.length ? '' : 'none yet';
   $('#featured').innerHTML = feat.length
     ? `<div class="links">${feat.map(l => cardHTML(l, true)).join('')}</div>`

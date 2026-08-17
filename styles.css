@@ -384,3 +384,6 @@ body.public .owner-only{display:none}
 .link-card.c-cocoa .bar i{background:#FFF4E3}
 .sw[data-c=cream]{background:var(--cream)}
 .sw[data-c=cocoa]{background:var(--cocoa)}
+
+/* [hidden] must beat explicit display rules (.section-title is display:flex). */
+[hidden]{display:none!important}
