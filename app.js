@@ -410,12 +410,19 @@ async function loadOwnerData(){
   let { data: page } = await sb.from('link_pages').select('*').eq('user_id', uid).maybeSingle();
 
   if (!page){
-    const base = slugify(state.session.user.email.split('@')[0]) || 'me';
-    const { data: created, error } = await sb.from('link_pages')
-      .insert({ user_id: uid, slug: `${base}-${Math.random().toString(36).slice(2,6)}`,
-                display_name: '', handle: '', bio: '', published: false })
-      .select().single();
-    if (error) throw error;
+    /* Never derive the slug from the email address: the slug is published in
+       the page URL, so an email-derived one leaks the local part of a user's
+       address to anyone who sees the link. Random and unguessable instead —
+       the user picks a real address in Edit. */
+    let created, error;
+    for (let attempt = 0; attempt < 5 && !created; attempt++){
+      ({ data: created, error } = await sb.from('link_pages')
+        .insert({ user_id: uid, slug: 'page-' + Math.random().toString(36).slice(2,10),
+                  display_name: '', handle: '', bio: '', published: false })
+        .select().single());
+      if (error && error.code !== '23505') throw error;   // 23505 = slug collision, retry
+    }
+    if (!created) throw error || new Error('Could not create your page');
     page = created;
   }
   state.page = page;
