@@ -713,7 +713,9 @@ $('#gSend').addEventListener('click', async () => {
   const email = $('#gEmail').value.trim();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast('Enter a valid email');
   $('#gSend').disabled = true; $('#gSend').textContent = 'Sending…';
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin } });
+  /* Trailing slash matters: Supabase redirect patterns are globs, and a
+     bare origin does not reliably match an entry written as ".../**". */
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + '/' } });
   $('#gSend').disabled = false; $('#gSend').textContent = 'Email me a sign-in link';
   if (error) return toast(error.message);
   $('#gNote').textContent = `Check ${email} for a sign-in link. It expires in an hour.`;
