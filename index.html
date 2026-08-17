@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BetterLink</title>
+<meta name="description" content="One link. Everything you are.">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230A0A0A'/><path d='M50 8Q52 48 92 50Q52 52 50 92Q48 52 8 50Q48 48 50 8Z' fill='%23FF52A8'/></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="stage">
+
+  <!-- ── Splash (owner console only) ────────────────────────────── -->
+  <div id="splash">
+    <div class="splash-art">
+      <svg viewBox="0 0 300 300" aria-hidden="true">
+        <g class="star-b" opacity=".5" style="transform-origin:212px 132px">
+          <path d="M212 78Q215 129 266 132Q215 135 212 186Q209 135 158 132Q209 129 212 78Z" fill="#fff" opacity=".2"/>
+          <path d="M212 78Q215 129 266 132Q215 135 212 186Q209 135 158 132Q209 129 212 78Z" fill="none" stroke="#fff" stroke-width=".8" opacity=".45"/>
+        </g>
+        <g class="star-a" style="transform-origin:124px 124px">
+          <path d="M124 8Q128 120 240 124Q128 128 124 240Q120 128 8 124Q120 120 124 8Z" fill="#FF52A8"/>
+          <path d="M124 44Q126 122 204 124Q126 126 124 204Q122 126 44 124Q122 122 124 44Z" fill="none" stroke="#fff" stroke-width=".9" opacity=".35"/>
+        </g>
+      </svg>
+    </div>
+    <p class="eyebrow" style="margin-bottom:12px">BetterLink</p>
+    <h1 class="h1">Everything you are,<br>in one place.</h1>
+    <button class="btn lime block" id="splashGo">Go ahead!</button>
+  </div>
+
+  <!-- ── Sign-in gate ───────────────────────────────────────────── -->
+  <div id="gate">
+    <svg class="gate-mark" viewBox="0 0 300 300" aria-hidden="true">
+      <path d="M124 8Q128 120 240 124Q128 128 124 240Q120 128 8 124Q120 120 124 8Z" fill="#FF52A8"/>
+    </svg>
+    <p class="eyebrow" style="margin-bottom:10px">BetterLink</p>
+    <h1 class="h1">Sign in to edit<br>your page.</h1>
+    <p>We'll email you a one-time link. No password to remember or leak.</p>
+    <div class="field"><label>Email</label><input class="input" id="gEmail" type="email" placeholder="you@example.com" autocomplete="email"></div>
+    <button class="btn lime block" id="gSend">Email me a sign-in link</button>
+    <p class="gate-note" id="gNote">Your public page stays visible to visitors whether or not you're signed in.</p>
+  </div>
+
+  <!-- ── Screens ────────────────────────────────────────────────── -->
+  <div class="screen" id="screen">
+
+    <!-- LINKS -->
+    <section class="view on" id="view-links">
+      <div class="topbar">
+        <div class="title">BetterLink</div>
+        <span class="chip" id="chip"><i></i><span id="chipText">…</span></span>
+        <button class="icon-btn" id="btnShare" title="Copy page link" aria-label="Copy page link">
+          <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/></svg>
+        </button>
+      </div>
+
+      <div class="profile">
+        <div class="avatar-row">
+          <div class="avatar" id="avatar"></div>
+          <div class="name-block">
+            <h1 class="h1" id="pName">Your Name</h1>
+            <div class="handle" id="pHandle">@handle</div>
+          </div>
+        </div>
+        <p class="bio" id="pBio"></p>
+        <div class="socials" id="socials"></div>
+      </div>
+
+      <div class="section-title">Featured<span class="count" id="featCount"></span></div>
+      <div id="featured"></div>
+
+      <div class="section-title">All links<span class="count" id="linkCount"></span></div>
+      <div class="links" id="links"></div>
+
+      <div class="made" id="made" hidden>Built with <b>BetterLink</b></div>
+    </section>
+
+    <!-- STATS -->
+    <section class="view" id="view-stats">
+      <div class="topbar"><div class="title">Analytics</div>
+        <button class="icon-btn" id="btnRefresh" title="Refresh" aria-label="Refresh">
+          <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        </button>
+      </div>
+      <div class="stat-grid" id="statGrid"></div>
+      <div class="section-title">Top performing</div>
+      <div class="rank" id="rank"></div>
+    </section>
+
+    <!-- THREADS STUDIO -->
+    <section class="view" id="view-threads">
+      <div class="topbar"><div class="title">Threads studio</div>
+        <button class="icon-btn" id="btnDraftsRefresh" title="Refresh" aria-label="Refresh">
+          <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        </button>
+      </div>
+      <div id="draftsNote"></div>
+      <div class="section-title">Drafts<span class="count" id="draftCount"></span></div>
+      <div id="drafts"></div>
+    </section>
+
+    <!-- EDIT -->
+    <section class="view" id="view-edit">
+      <div class="topbar"><div class="title">Edit</div></div>
+
+      <div class="card">
+        <div class="switch-row">
+          <div><div class="lbl">Publish page</div><div class="sub" id="pubSub">Visible to anyone with the link</div></div>
+          <button class="switch" id="swPublish" role="switch" aria-checked="false"><i></i></button>
+        </div>
+        <div class="urlbox"><code id="publicUrl">—</code>
+          <button class="icon-btn" id="btnCopyUrl" aria-label="Copy public URL">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2.6"/><path d="M15 5H6a2 2 0 0 0-2 2v9"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <button class="toggle-head" data-collapse="cProfile">
+          <span class="h2">Profile</span>
+          <span class="chev" id="chev-cProfile"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>
+        </button>
+        <div class="collapse" id="cProfile">
+          <div class="field"><label>Page address</label><input class="input" id="fSlug" placeholder="yourname" autocapitalize="off" spellcheck="false"></div>
+          <div class="field"><label>Display name</label><input class="input" id="fName" placeholder="Your Name"></div>
+          <div class="field"><label>Handle</label><input class="input" id="fHandle" placeholder="@handle"></div>
+          <div class="field"><label>Bio</label><textarea class="input" id="fBio" placeholder="One line about you."></textarea></div>
+          <div class="field"><label>Avatar image URL (optional)</label><input class="input" id="fAvatar" placeholder="https://…"></div>
+          <div class="field"><label>Accent</label>
+            <div class="swatches" id="accentSw"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Links<span class="count" id="editCount"></span></div>
+      <div id="editList"></div>
+      <button class="btn lime block" id="btnAdd" style="margin-top:12px">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add link
+      </button>
+
+      <div class="section-title">Social icons</div>
+      <div id="editSocials"></div>
+      <button class="btn ghost block" id="btnAddSocial" style="margin-top:12px">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add social
+      </button>
+
+      <div class="section-title">Account</div>
+      <div class="card">
+        <p style="font-size:13px;color:var(--ink-mid);line-height:1.5" id="acctLine">Not signed in.</p>
+        <div class="btn-row">
+          <button class="btn ghost" id="btnExport">
+            <svg viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg> Export
+          </button>
+          <button class="btn ghost" id="btnSignOut">Sign out</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── Nav ────────────────────────────────────────────────────── -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <button class="tab on" data-view="links">
+        <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></svg><span>Links</span>
+      </button>
+      <button class="tab" data-view="stats">
+        <svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></svg><span>Stats</span>
+      </button>
+      <button class="tab" data-view="threads">
+        <svg viewBox="0 0 24 24"><path d="M12 21c4.5 0 8-3.2 8-8.4C20 6.6 16.8 3 12.2 3 8 3 5 5.6 4.6 9.4"/><path d="M8.4 13.4c0 1.7 1.5 2.7 3.1 2.7 2.2 0 3.4-1.4 3.4-4.6 0-2.4-1.6-3.6-3.5-3.6"/></svg><span>Threads</span>
+      </button>
+      <button class="tab" data-view="edit">
+        <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="M14.5 6.5 17.5 9.5"/></svg><span>Edit</span>
+      </button>
+    </div>
+  </nav>
+
+  <div id="toast"></div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
