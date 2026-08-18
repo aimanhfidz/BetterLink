@@ -1085,6 +1085,33 @@ $('#btnRefresh').addEventListener('click', async () => {
   state.events = data || []; renderStats(); toast('Refreshed');
 });
 
+/* ── Theme ────────────────────────────────────────────────────────────
+   The inline script in <head> picks the theme before the first paint; this
+   only handles changing it. A stored choice pins the theme, so the system
+   listener below stops applying once the user has chosen one. */
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  const m = $('meta[name="theme-color"]');
+  if (m) m.setAttribute('content', t === 'light' ? '#FFFFFF' : '#0A0A0A');
+  const b = $('#btnTheme');
+  if (b) b.setAttribute('aria-label', t === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+}
+applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+
+$('#btnTheme').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  applyTheme(next);
+  try { localStorage.setItem('bl.theme', next) } catch {}
+  toast(next === 'light' ? 'Light mode' : 'Dark mode');
+});
+
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', e => {
+  let stored = null;
+  try { stored = localStorage.getItem('bl.theme') } catch {}
+  if (stored === 'light' || stored === 'dark') return;   // user has decided
+  applyTheme(e.matches ? 'light' : 'dark');
+});
+
 /* ── Share ────────────────────────────────────────────────────────── */
 $('#btnShare').addEventListener('click', async () => {
   const url = state.page?.slug ? publicUrlFor(state.page.slug) : location.href;

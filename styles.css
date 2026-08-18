@@ -1,8 +1,14 @@
+/* Dark is the base theme; [data-theme="light"] below overrides only the
+   tokens that must change. The brand fills (lime/pink/blue/yellow/cream/
+   cocoa) are identical in both — they are the brand, not the chrome. */
 :root{
+  color-scheme:dark;
   --bg:#0A0A0A;
   --surface:#141414;
   --surface-2:#1C1C1C;
+  --surface-3:#333333;
   --line:#2A2A2A;
+  --line-hover:#3A3A3A;
   --ink:#FFFFFF;
   --ink-dim:#8A8A8A;
   --ink-mid:#B5B5B5;
@@ -10,13 +16,52 @@
   --pink:#FF52A8;
   --blue:#2D7FF9;
   --yellow:#F0EC3D;
+  /* Ink on a brand-coloured fill. Those fills are bright in both themes, so
+     this stays dark — unlike --on-ink, which sits on the --ink fill and has
+     to invert with it. Collapsing the two turns buttons black-on-black. */
   --on-color:#0A0A0A;
+  --on-ink:#0A0A0A;
+  --accent-ink:var(--lime);        /* accent used as text, not as a fill */
+  --warn-ink:var(--yellow);
+  --danger:#FF5A5A;
+  --danger-line:#3A2020;
+  --placeholder:#5C5C5C;
+  --frame:#262626;
+  --rail:rgba(16,16,16,.72);
+  --pill:rgba(22,22,22,.86);
+  --glow-1:#151815; --glow-2:#0C0C0C; --glow-3:#080808;
+  --hero-glow:#16191A;
+  --quote-bg:#161A15; --quote-line:#33372F;
   --r-lg:26px;
   --r-md:20px;
   --r-sm:14px;
   --pad:18px;
   --nav-h:78px;
   --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,"Helvetica Neue",Arial,sans-serif;
+}
+[data-theme="light"]{
+  color-scheme:light;
+  --bg:#FFFFFF;
+  --surface:#F5F5F7;
+  --surface-2:#EBEBEF;
+  --surface-3:#DEDEE4;
+  --line:#E3E3E9;
+  --line-hover:#C8C8D2;
+  --ink:#0B0B0C;
+  --ink-dim:#6C6C77;
+  --ink-mid:#50505A;
+  --on-ink:#FFFFFF;
+  --accent-ink:#167530;            /* lime is unreadable as text on white */
+  --warn-ink:#8A6100;              /* nor is yellow */
+  --danger:#C92A20;
+  --danger-line:#F0C7C3;
+  --placeholder:#8A8A96;
+  --frame:#DEDEE4;
+  --rail:rgba(255,255,255,.78);
+  --pill:rgba(255,255,255,.86);
+  --glow-1:#F1F5F1; --glow-2:#FAFAFA; --glow-3:#FFFFFF;
+  --hero-glow:#F0F4EF;
+  --quote-bg:#F2F8F1; --quote-line:#D7E4D2;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -37,9 +82,9 @@ a{color:inherit;text-decoration:none}
   display:flex;flex-direction:column;
 }
 @media (min-width:820px) and (max-width:1023.98px) and (min-height:760px){
-  body{background:radial-gradient(120% 90% at 50% 0%,#1A1F1B 0%,#0C0C0C 55%,#070707 100%)}
+  body{background:radial-gradient(120% 90% at 50% 0%,var(--glow-1) 0%,var(--glow-2) 55%,var(--glow-3) 100%)}
   #stage{
-    height:860px;border-radius:44px;border:1px solid #262626;
+    height:860px;border-radius:44px;border:1px solid var(--frame);
     box-shadow:0 40px 120px rgba(0,0,0,.7);
   }
 }
@@ -92,7 +137,7 @@ a{color:inherit;text-decoration:none}
 .avatar .spark svg{width:34px;height:34px}
 .name-block{min-width:0;flex:1}
 .name-block .h1{font-size:27px}
-.handle{color:var(--lime);font-size:13px;font-weight:600;margin-top:3px}
+.handle{color:var(--accent-ink);font-size:13px;font-weight:600;margin-top:3px}
 .bio{color:var(--ink-mid);font-size:14px;line-height:1.45;margin-top:14px;max-width:34ch}
 .verified{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--blue);margin-left:6px;vertical-align:2px}
 .verified svg{width:9px;height:9px;stroke:#fff;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
@@ -104,7 +149,7 @@ a{color:inherit;text-decoration:none}
   border:1px solid var(--line);display:grid;place-items:center;
   transition:transform .18s,background .18s,border-color .18s;
 }
-.social:hover{background:var(--surface-2);border-color:#3A3A3A;transform:translateY(-2px)}
+.social:hover{background:var(--surface-2);border-color:var(--line-hover);transform:translateY(-2px)}
 .social:active{transform:scale(.92)}
 .social svg{width:19px;height:19px}
 
@@ -189,7 +234,7 @@ a{color:inherit;text-decoration:none}
   transition:border-color .18s,background .18s;
 }
 .input:focus{border-color:var(--lime);background:var(--surface-2)}
-.input::placeholder{color:#5C5C5C}
+.input::placeholder{color:var(--placeholder)}
 textarea.input{resize:vertical;min-height:76px;line-height:1.45}
 
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:16px}
@@ -201,7 +246,7 @@ textarea.input{resize:vertical;min-height:76px;line-height:1.45}
   width:26px;height:22px;border-radius:7px;background:var(--surface-2);
   display:grid;place-items:center;transition:background .15s;
 }
-.grip button:hover:not(:disabled){background:#333}
+.grip button:hover:not(:disabled){background:var(--surface-3)}
 .grip button:disabled{opacity:.28;cursor:default}
 .grip svg{width:11px;height:11px;stroke:var(--ink);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .swatches{display:flex;gap:7px;flex-wrap:wrap}
@@ -222,10 +267,10 @@ textarea.input{resize:vertical;min-height:76px;line-height:1.45}
 }
 .btn:active{transform:scale(.97)}
 .btn:hover{filter:brightness(1.08)}
-.btn.primary{background:var(--ink);color:var(--on-color)}
+.btn.primary{background:var(--ink);color:var(--on-ink)}
 .btn.lime{background:var(--lime);color:var(--on-color)}
 .btn.ghost{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
-.btn.danger{background:transparent;color:#FF5A5A;border:1px solid #3A2020}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger-line)}
 .btn.block{width:100%}
 .btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .btn-row{display:flex;gap:9px;margin-top:14px}
@@ -247,7 +292,7 @@ textarea.input{resize:vertical;min-height:76px;line-height:1.45}
 }
 .nav-inner{
   display:flex;align-items:center;gap:3px;pointer-events:auto;
-  background:rgba(22,22,22,.86);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  background:var(--pill);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
   border:1px solid var(--line);border-radius:99px;padding:6px;
 }
 .tab{
@@ -257,13 +302,13 @@ textarea.input{resize:vertical;min-height:76px;line-height:1.45}
 }
 .tab svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .tab span{display:none}
-.tab.on{background:var(--ink);color:var(--on-color)}
+.tab.on{background:var(--ink);color:var(--on-ink)}
 .tab.on span{display:inline}
 
 /* ── Toast ────────────────────────────────────────────────────────── */
 #toast{
   position:absolute;left:50%;bottom:calc(var(--nav-h) + 14px);transform:translate(-50%,16px);
-  background:var(--ink);color:var(--on-color);font-size:13px;font-weight:700;
+  background:var(--ink);color:var(--on-ink);font-size:13px;font-weight:700;
   padding:11px 18px;border-radius:99px;z-index:60;opacity:0;pointer-events:none;
   transition:opacity .22s,transform .22s;white-space:nowrap;
 }
@@ -309,12 +354,12 @@ textarea.input{resize:vertical;min-height:76px;line-height:1.45}
   letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border-radius:99px;
   background:var(--surface);border:1px solid var(--line);color:var(--ink-dim)}
 .chip i{width:6px;height:6px;border-radius:50%;background:var(--ink-dim);display:block}
-.chip.live i{background:var(--lime)}
-.chip.live{color:var(--lime)}
-.chip.local i{background:var(--yellow)}
-.chip.local{color:var(--yellow)}
-.chip.err i{background:#FF5A5A}
-.chip.err{color:#FF5A5A}
+.chip.live i{background:var(--accent-ink)}
+.chip.live{color:var(--accent-ink)}
+.chip.local i{background:var(--warn-ink)}
+.chip.local{color:var(--warn-ink)}
+.chip.err i{background:var(--danger)}
+.chip.err{color:var(--danger)}
 
 /* ── Switch ───────────────────────────────────────────────────────── */
 .switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 0}
@@ -370,7 +415,7 @@ body.public .owner-only{display:none}
   background:var(--surface);border:1px solid var(--line);color:var(--ink-dim);
   transition:background .18s,color .18s}
 .filter:hover{background:var(--surface-2)}
-.filter.on{background:var(--ink);color:var(--on-color);border-color:transparent}
+.filter.on{background:var(--ink);color:var(--on-ink);border-color:transparent}
 
 /* ── Draft editing ────────────────────────────────────────────────── */
 .draft.editing{border-color:var(--lime)}
@@ -379,7 +424,7 @@ body.public .owner-only{display:none}
 .draft textarea.input{min-height:64px}
 .draft textarea.input.big{min-height:132px}
 .char{font-size:11px;color:var(--ink-dim);text-align:right;margin-top:5px;font-variant-numeric:tabular-nums}
-.char.over{color:#FF5A5A;font-weight:700}
+.char.over{color:var(--danger);font-weight:700}
 
 /* ── Warm card colours (tiramisu: mascarpone + dusted cocoa) ──────── */
 :root{ --cream:#EBD7A8; --cocoa:#A2663A; }
@@ -403,7 +448,7 @@ body.public .owner-only{display:none}
 .ai-panel{margin:12px 0 4px;border-color:var(--lime)}
 .ai-panel textarea.input{min-height:76px}
 .ai-note{font-size:12px;color:var(--ink-dim);line-height:1.5;margin-top:10px}
-.ai-note.err{color:#FF5A5A}
+.ai-note.err{color:var(--danger)}
 .btn[disabled]{opacity:.55;cursor:default}
 .icon-btn.on{background:var(--lime);border-color:transparent}
 .icon-btn.on svg{stroke:var(--on-color);fill:var(--on-color)}
@@ -424,7 +469,7 @@ body.public .owner-only{display:none}
 
   body{
     display:block;overflow:hidden;
-    background:radial-gradient(120% 90% at 50% 0%,#151815 0%,#0C0C0C 55%,#080808 100%);
+    background:radial-gradient(120% 90% at 50% 0%,var(--glow-1) 0%,var(--glow-2) 55%,var(--glow-3) 100%);
   }
   #stage{
     max-width:none;width:100%;height:100%;
@@ -437,7 +482,7 @@ body.public .owner-only{display:none}
     top:0;right:auto;bottom:0;width:var(--rail-w);height:auto;
     position:fixed;
     flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;
-    padding:26px 18px;background:rgba(16,16,16,.72);
+    padding:26px 18px;background:var(--rail);
     border-right:1px solid var(--line);
     backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
   }
@@ -563,7 +608,7 @@ body.public .owner-only{display:none}
     display:grid;grid-template-columns:minmax(280px,380px) minmax(0,600px);
     grid-template-rows:auto auto auto auto;
     align-content:center;justify-content:center;column-gap:80px;
-    background:radial-gradient(90% 120% at 20% 0%,#16191A 0%,var(--bg) 60%);
+    background:radial-gradient(90% 120% at 20% 0%,var(--hero-glow) 0%,var(--bg) 60%);
   }
   .splash-art{grid-column:1;grid-row:1 / span 4;width:100%;align-self:center}
   .splash-art svg{width:100%;max-width:400px}
@@ -576,7 +621,7 @@ body.public .owner-only{display:none}
     width:auto;text-align:left;margin-top:14px;padding:6px 2px}
   #gate{
     left:0;align-items:center;justify-content:center;padding:48px;
-    background:radial-gradient(90% 120% at 20% 0%,#16191A 0%,var(--bg) 60%);
+    background:radial-gradient(90% 120% at 20% 0%,var(--hero-glow) 0%,var(--bg) 60%);
   }
   .gate-card{
     max-width:452px;padding:40px 36px;
@@ -648,7 +693,7 @@ textarea.ob-area{min-height:150px;font-size:15px;line-height:1.55}
 
 /* ── The finished system ──────────────────────────────────────────── */
 .ob-cap{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
-.ob-quote{border-color:#33372F;background:linear-gradient(180deg,#161A15,var(--surface))}
+.ob-quote{border-color:var(--quote-line);background:linear-gradient(180deg,var(--quote-bg),var(--surface))}
 .ob-positioning{font-size:18px;line-height:1.42;font-weight:600;letter-spacing:-.01em;margin-top:9px}
 .ob-note{color:var(--ink-mid);font-size:13.5px;line-height:1.55;margin-top:7px}
 
@@ -664,8 +709,8 @@ textarea.ob-area{min-height:150px;font-size:15px;line-height:1.55}
 .ob-rules{list-style:none;display:flex;flex-direction:column;gap:10px}
 .ob-rules li{position:relative;padding-left:26px;font-size:13.5px;line-height:1.5;color:var(--ink-mid)}
 .ob-rules li::before{position:absolute;left:0;top:0;font-weight:800;font-size:13px}
-.ob-rules li.yes::before{content:"✓";color:var(--lime)}
-.ob-rules li.no::before{content:"✕";color:#FF5A5A}
+.ob-rules li.yes::before{content:"✓";color:var(--accent-ink)}
+.ob-rules li.no::before{content:"✕";color:var(--danger)}
 .ob-finish{margin-top:22px}
 
 /* ── Drafts studio: the voice line above the list ─────────────────── */
@@ -693,4 +738,29 @@ textarea.ob-area{min-height:150px;font-size:15px;line-height:1.55}
   .ob-positioning{font-size:21px}
   .ob-pillars{display:grid;grid-template-columns:repeat(2,minmax(280px,1fr));gap:14px;align-items:start}
   .ob-quote{padding:22px}
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   THEME TOGGLE — light-mode corrections that are not just token swaps
+   ══════════════════════════════════════════════════════════════════════ */
+#btnTheme svg{transition:transform .3s cubic-bezier(.2,.8,.3,1)}
+#btnTheme:active svg{transform:rotate(-25deg)}
+[data-theme="dark"] .ico-moon,
+[data-theme="light"] .ico-sun{display:none}
+
+/* A white button on a light card needs an edge to exist at all. */
+[data-theme="light"] .btn.google{border:1px solid var(--line)}
+/* The companion star is painted white in the markup, which is a ghost on a
+   dark page and nothing at all on a light one. CSS beats the attribute. */
+.star-b path{fill:var(--ink);stroke:var(--ink)}
+/* The chart stroke is set as an SVG attribute in JS; CSS still wins, and
+   lime on white is too faint to read as a line. */
+[data-theme="light"] .spark path{stroke:var(--accent-ink)}
+/* Dark-theme shadows are near-invisible on white and read as grey mud. */
+[data-theme="light"] .gate-card{box-shadow:0 24px 60px rgba(16,16,24,.10)}
+[data-theme="light"] #stage{box-shadow:0 40px 120px rgba(16,16,24,.16)}
+/* Skeletons need contrast against a light surface. */
+[data-theme="light"] .skel{
+  background:linear-gradient(90deg,var(--surface) 25%,#DFDFE6 50%,var(--surface) 75%);
+  background-size:200% 100%;
 }
