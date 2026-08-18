@@ -1111,18 +1111,35 @@ $('#btnSignOut').addEventListener('click', async () => {
 });
 
 /* ── Auth gate ────────────────────────────────────────────────────── */
-$('#gGoogle').addEventListener('click', async () => {
-  $('#gGoogle').disabled = true;
+/* Both the splash CTA and the gate button start the same OAuth hand-off.
+   On success the browser navigates to Google, so anything after the await
+   means it failed and the user needs a way forward. */
+async function signInWithGoogle(){
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: location.origin + '/' }
   });
-  /* On success the browser navigates away, so reaching here means it failed. */
-  if (error){
+  if (!error) return null;
+  return error.message.includes('provider')
+    ? 'Google sign-in is not enabled on this project yet.'
+    : error.message;
+}
+
+/* The gate is the fallback surface: it carries the email option and the
+   error copy, so failures and "use email instead" both land here. */
+function openGate(note, withEmail){
+  $('#splash').classList.add('gone');
+  $('#gate').classList.add('on');
+  if (note) $('#gNote').textContent = note;
+  if (withEmail && $('#gEmailBlock').hidden) $('#gToggleEmail').click();
+}
+
+$('#gGoogle').addEventListener('click', async () => {
+  $('#gGoogle').disabled = true;
+  const err = await signInWithGoogle();
+  if (err){
     $('#gGoogle').disabled = false;
-    $('#gNote').textContent = error.message.includes('provider')
-      ? 'Google sign-in is not enabled on this project yet.'
-      : error.message;
+    $('#gNote').textContent = err;
   }
 });
 
@@ -1147,11 +1164,29 @@ $('#gSend').addEventListener('click', async () => {
 });
 $('#gEmail').addEventListener('keydown', e => { if (e.key === 'Enter') $('#gSend').click(); });
 
-/* ── Splash ───────────────────────────────────────────────────────── */
-$('#splashGo').addEventListener('click', () => {
-  $('#splash').classList.add('gone');
-  try { sessionStorage.setItem('bl.splash','1') } catch {}
+/* ── Splash ───────────────────────────────────────────────────────────
+   The splash is the front door: it is what a signed-out visitor sees first,
+   and "Go ahead!" takes them straight to Google. Someone already signed in
+   has been through that door, so for them it steps aside on load. */
+$('#splashGo').addEventListener('click', async () => {
+  if (state.session){
+    $('#splash').classList.add('gone');
+    try { sessionStorage.setItem('bl.splash','1') } catch {}
+    return;
+  }
+  const btn = $('#splashGo');
+  btn.disabled = true;
+  btn.textContent = 'Taking you to Google…';
+  const err = await signInWithGoogle();
+  if (err){
+    btn.disabled = false;
+    btn.textContent = 'Go ahead!';
+    openGate(err, true);
+  }
 });
+
+$('#splashEmail').addEventListener('click', () => openGate(null, true));
+
 try { if (sessionStorage.getItem('bl.splash')) $('#splash').classList.add('gone') } catch {}
 
 /* ── Boot ─────────────────────────────────────────────────────────── */
@@ -1188,11 +1223,13 @@ async function boot(){
   state.session = session;
 
   if (!session){
-    $('#splash').classList.add('gone');
-    $('#gate').classList.add('on');
     setChip('local','signed out');
-    return;
+    return;   // splash stays up; the gate opens only on request or on failure
   }
+
+  /* Already signed in: the front door has served its purpose. */
+  $('#splash').classList.add('gone');
+  try { sessionStorage.setItem('bl.splash','1') } catch {}
 
   setChip('local','loading…');
   try {
@@ -1206,7 +1243,7 @@ async function boot(){
 }
 
 sb.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_IN' && $('#gate').classList.contains('on')) location.replace(location.pathname);
+  if (event === 'SIGNED_IN' && !state.session) location.replace(location.pathname);
 });
 
 boot();
