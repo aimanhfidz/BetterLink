@@ -33,9 +33,13 @@
 
   <!-- ── Sign-in gate ───────────────────────────────────────────── -->
   <div id="gate">
-    <svg class="gate-mark" viewBox="0 0 300 300" aria-hidden="true">
-      <path d="M124 8Q128 120 240 124Q128 128 124 240Q120 128 8 124Q120 120 124 8Z" fill="#FF52A8"/>
-    </svg>
+   <div class="gate-card">
+    <div class="gate-mark" aria-hidden="true">
+      <svg viewBox="0 0 248 248">
+        <path d="M124 8Q128 120 240 124Q128 128 124 240Q120 128 8 124Q120 120 124 8Z" fill="#FF52A8"/>
+        <path d="M124 44Q126 122 204 124Q126 126 124 204Q122 126 44 124Q122 122 124 44Z" fill="none" stroke="#fff" stroke-width=".9" opacity=".35"/>
+      </svg>
+    </div>
     <p class="eyebrow" style="margin-bottom:10px">BetterLink</p>
     <h1 class="h1">Sign in to edit<br>your page.</h1>
     <p>One tap with Google. No password to remember or leak.</p>
@@ -58,6 +62,7 @@
     </div>
 
     <p class="gate-note" id="gNote">Your public page stays visible to visitors whether or not you're signed in.</p>
+   </div>
   </div>
 
   <!-- ── Screens ────────────────────────────────────────────────── -->
@@ -143,6 +148,19 @@
       <div id="draftsNote"></div>
       <div class="section-title">Drafts<span class="count" id="draftCount"></span></div>
       <div id="drafts"></div>
+    </section>
+
+    <!-- BRAND ONBOARDING -->
+    <section class="view" id="view-onboard">
+      <div class="topbar">
+        <button class="icon-btn" id="obExit" title="Back" aria-label="Back to links">
+          <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="title">Your brand system</div>
+        <span class="ob-step" id="obStep"></span>
+      </div>
+      <div class="ob-track" id="obTrack" hidden><i id="obBar"></i></div>
+      <div id="obStage"></div>
     </section>
 
     <!-- EDIT -->

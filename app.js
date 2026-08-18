@@ -45,6 +45,17 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const today = () => new Date().toISOString().slice(0,10);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+/* supabase-js collapses any non-2xx from a function into "non-2xx status code"
+   and hides the body, which is where the useful message lives (a missing API
+   key, a quota, a validation error). Dig it back out. */
+async function fnError(error){
+  try {
+    const body = await error?.context?.json?.();
+    if (body?.error) return String(body.error);
+  } catch {}
+  return error?.message || 'Request failed';
+}
+
 /* A page can be addressed two ways. /u/<slug> is the canonical pretty form
    (vercel.json rewrites it to index.html); ?u=<slug> is kept working so any
    link already shared stays valid. */
@@ -53,7 +64,16 @@ function readSlug(){
   if (m) return decodeURIComponent(m[1]);
   return new URLSearchParams(location.search).get('u');
 }
-const publicUrlFor = slug => `${location.origin}/u/${encodeURIComponent(slug)}`;
+/* Vercel serves this project on more than one production alias —
+   betterlink.vercel.app and betterlink-<account>.vercel.app both point at the
+   same deployment. A link you hand to someone should always carry the short
+   one, whichever alias the console happens to be open on, so the origin is
+   pinned here instead of read out of the address bar. Change this one line if
+   the page ever moves to a custom domain. */
+const PUBLIC_ORIGIN = 'https://betterlink.vercel.app';
+const onLocalhost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+const publicOrigin = () => onLocalhost ? location.origin : PUBLIC_ORIGIN;
+const publicUrlFor = slug => `${publicOrigin()}/u/${encodeURIComponent(slug)}`;
 
 function safeURL(u){
   const s = String(u||'').trim();
@@ -86,9 +106,13 @@ const state = {
   socials: [],
   events: [],
   drafts: [],
-  draftFilter: 'all',
+  draftFilter: 'draft',   // the studio opens on unposted work, not the archive
   editingDraft: null,
-  viewSlug: null
+  viewSlug: null,
+  profile: null,          // brand system: voice, positioning, audience
+  pillars: [],
+  onboard: null,          // in-progress interview, see renderOnboard()
+  onboardSkipped: false
 };
 
 /* ── Rendering: public-facing page ────────────────────────────────── */
@@ -254,6 +278,16 @@ function visibleDrafts(){
 function renderDrafts(){
   draftFilters();
   const list = visibleDrafts();
+
+  /* Once the interview is done, keep the voice visible and reachable — it is
+     what every draft is written against. */
+  const bp = state.profile;
+  $('#draftsNote').innerHTML = bp?.onboarding_completed
+    ? `<div class="voice-line">
+         <p>${esc(bp.positioning_statement || 'Your brand system is set.')}</p>
+         <button data-act="brand">Brand system</button>
+       </div>`
+    : '';
   $('#draftCount').textContent = list.length ? list.length + ' shown' : '';
 
   const unposted = state.drafts.filter(d => d.status === 'draft').length;
@@ -303,7 +337,7 @@ function renderDrafts(){
       `}
     </div>`;
   }).join('') : `<div class="empty"><strong>Nothing here</strong>${
-    state.draftFilter === 'all' ? 'Tap + to write your first draft.' : 'No drafts with this status.'
+    state.drafts.length ? 'No drafts with this status.' : 'Tap + to write your first draft.'
   }</div>`;
 }
 
@@ -387,6 +421,7 @@ function show(v){
   if (v === 'stats')   renderStats();
   if (v === 'edit')    renderEdit();
   if (v === 'threads') renderDrafts();
+  if (v === 'onboard') renderOnboard();
 }
 $$('.tab').forEach(t => t.addEventListener('click', () => show(t.dataset.view)));
 
@@ -427,17 +462,22 @@ async function loadOwnerData(){
   }
   state.page = page;
 
-  const [{ data: links }, { data: socials }, { data: events }, { data: drafts }] = await Promise.all([
+  const [{ data: links }, { data: socials }, { data: events }, { data: drafts },
+         { data: profile }, { data: pillars }] = await Promise.all([
     sb.from('links').select('*').eq('page_id', page.id).order('sort_order'),
     sb.from('link_socials').select('*').eq('page_id', page.id).order('sort_order'),
     sb.from('link_events').select('id,kind,link_id,created_at').eq('owner_id', uid)
       .gte('created_at', new Date(Date.now() - 60*864e5).toISOString()).order('created_at', { ascending:false }).limit(5000),
-    sb.from('drafts').select('*').order('created_at', { ascending:false })
+    sb.from('drafts').select('*').order('created_at', { ascending:false }),
+    sb.from('profiles').select('*').eq('id', uid).maybeSingle(),
+    sb.from('pillars').select('*').eq('user_id', uid).order('sort_order')
   ]);
   state.links   = links   || [];
   state.socials = socials || [];
   state.events  = events  || [];
   state.drafts  = drafts  || [];
+  state.profile = profile || null;
+  state.pillars = pillars || [];
 }
 
 async function logEvent(kind, link_id){
@@ -618,7 +658,14 @@ $$('[data-collapse]').forEach(h => h.addEventListener('click', () => {
 }));
 
 /* ── Threads drafts wiring ────────────────────────────────────────── */
-$('#btnThreads').addEventListener('click', () => show('threads'));
+$('#btnThreads').addEventListener('click', () => {
+  /* The studio writes in the user's voice, so a first-time user is interviewed
+     before they see it. Skipping defers to the next visit rather than marking
+     the interview done — the answers are what make drafting worth using. */
+  if (!state.profile?.onboarding_completed && !state.onboardSkipped) return show('onboard');
+  state.draftFilter = 'draft';   // entering the studio always lands on Drafts
+  show('threads');
+});
 $('#btnBack').addEventListener('click', () => show('links'));
 
 $('#draftFilters').addEventListener('click', e => {
@@ -626,6 +673,270 @@ $('#draftFilters').addEventListener('click', e => {
   state.draftFilter = b.dataset.filter;
   state.editingDraft = null;
   renderDrafts();
+});
+
+/* ── Brand onboarding ─────────────────────────────────────────────────
+   Keys match the generate-brand-system payload exactly; it turns these
+   answers into a positioning statement, voice rules and five pillars,
+   which generate-draft then reads on every draft it writes. */
+const OB_Q = [
+  { key:'name', line:true, required:true,
+    q:'What name do you write under?',
+    hint:'The drafts speak as you, so this is the name they carry.',
+    ph:'Aiman Hafidz' },
+  { key:'audience', required:true,
+    q:'Who are you writing for?',
+    hint:'Be specific. "Everyone" writes to no one — name the person you picture reading it.',
+    ph:'Malaysian founders doing their first RM10k month, mostly running things alone.' },
+  { key:'background',
+    q:'What have you actually done?',
+    hint:'Roles, years, things you built or ran. This is where credibility comes from.',
+    ph:'Six years in operations, two of them running a 14-person team…' },
+  { key:'businesses',
+    q:'What are you running right now?',
+    hint:'Real names, and real numbers if you have them. Numbers are what make a post land.',
+    ph:'MISU, a handmade tiramisu brand in PJ. Around 120 orders a month…' },
+  { key:'failure',
+    q:'What went wrong that you would be willing to talk about?',
+    hint:'A launch that flopped, money lost, a hire that failed. This is what makes posts human.',
+    ph:'Burned RM8k on ads before I understood who was actually buying…' },
+  { key:'topics', required:true,
+    q:'What do you want to be known for?',
+    hint:'The three to five things you could talk about for an hour with no notes.',
+    ph:'Ops systems, hiring your first person, selling without being loud.' },
+  { key:'voiceNotes', required:true,
+    q:'How do you actually talk?',
+    hint:'Language, how formal, what you would never say. Write this one exactly how you text.',
+    ph:'BM campur English. Straight to the point, no corporate speak, no hype words.' }
+];
+
+const obKey = () => `bl.onboard.${state.session?.user?.id || 'anon'}`;
+const obLoad = () => { try { return JSON.parse(localStorage.getItem(obKey())) || {} } catch { return {} } };
+const obSave = () => { try { localStorage.setItem(obKey(), JSON.stringify(state.onboard.answers)) } catch {} };
+
+function startOnboard(){
+  const saved = obLoad();
+  const pick = k => saved[k] || '';
+  state.onboard = {
+    phase: 'intro', step: 0, error: '',
+    answers: {
+      name: pick('name') || state.page?.display_name || '',
+      audience: pick('audience'),
+      background: pick('background'),
+      businesses: pick('businesses'),
+      failure: pick('failure'),
+      topics: pick('topics'),
+      voiceNotes: pick('voiceNotes')
+    }
+  };
+}
+
+function renderOnboard(){
+  if (!state.onboard) startOnboard();
+  const ob = state.onboard;
+  const stage = $('#obStage');
+
+  $('#obTrack').hidden = ob.phase !== 'q';
+  $('#obStep').textContent = ob.phase === 'q' ? `${ob.step + 1} / ${OB_Q.length}` : '';
+  if (ob.phase === 'q') $('#obBar').style.width = `${((ob.step + 1) / OB_Q.length) * 100}%`;
+
+  if (ob.phase === 'intro'){
+    const answered = Object.values(ob.answers).filter(v => v.trim()).length;
+    stage.innerHTML = `
+      <div class="ob-hero">
+        <div class="ob-mark">${svg('star')}</div>
+        <h1 class="h1">First — how do<br>you actually sound?</h1>
+        <p class="ob-lede">Seven questions about your work, your people, and the way you talk.
+          They become your positioning, five content pillars and a set of voice rules, and every
+          draft after this is written to them.</p>
+        <p class="ob-lede dim">About three minutes. None of it is published — it is only ever
+          used to write your drafts.</p>
+        <button class="btn lime block" data-ob="start">${answered ? 'Pick up where you left off' : 'Start'}</button>
+        <button class="link-btn" data-ob="skip">Skip for now</button>
+      </div>`;
+    return;
+  }
+
+  if (ob.phase === 'busy'){
+    stage.innerHTML = `
+      <div class="ob-busy">
+        <div class="ob-mark spin">${svg('star')}</div>
+        <div class="h2">Building your system…</div>
+        <p class="ob-lede">Reading your answers, working out what only you can say, and naming
+          the five things you will post about.</p>
+        <div class="skel" style="height:96px"></div>
+        <div class="skel" style="height:140px"></div>
+      </div>`;
+    return;
+  }
+
+  if (ob.phase === 'error'){
+    stage.innerHTML = `
+      <div class="card ob-error">
+        <div class="h2">That didn't go through</div>
+        <p class="ai-note err">${esc(ob.error)}</p>
+        <p class="ai-note">Your answers are saved — nothing was lost.</p>
+        <div class="btn-row">
+          <button class="btn lime" data-ob="submit">Try again</button>
+          <button class="btn ghost" data-ob="back">Back to answers</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  if (ob.phase === 'done'){
+    const p = state.profile || {};
+    const rules = (arr, cls) => (Array.isArray(arr) ? arr : [])
+      .map(r => `<li class="${cls}">${esc(r)}</li>`).join('');
+    stage.innerHTML = `
+      <div class="ob-hero tight">
+        <div class="ob-mark">${svg('star')}</div>
+        <h1 class="h1">This is your<br>brand system.</h1>
+      </div>
+      <div class="card ob-quote">
+        <div class="ob-cap">Positioning</div>
+        <p class="ob-positioning">${esc(p.positioning_statement || '—')}</p>
+        ${p.unfair_advantage ? `<div class="ob-cap" style="margin-top:18px">What makes it hard to copy</div>
+          <p class="ob-note">${esc(p.unfair_advantage)}</p>` : ''}
+      </div>
+      <div class="section-title">Your pillars<span class="count">${state.pillars.length} total</span></div>
+      <div class="ob-pillars">
+        ${state.pillars.map(pl => `
+          <div class="card ob-pillar">
+            <div class="ob-pillar-top">
+              <div class="h2">${esc(pl.name)}</div>
+              ${pl.job ? `<span class="tag pillar">${esc(pl.job)}</span>` : ''}
+            </div>
+            ${pl.description ? `<p class="ob-note">${esc(pl.description)}</p>` : ''}
+            ${(Array.isArray(pl.hooks) ? pl.hooks : []).slice(0,3)
+              .map(h => `<div class="ob-hook">${esc(h)}</div>`).join('')}
+          </div>`).join('')}
+      </div>
+      <div class="section-title">Your voice</div>
+      <div class="card">
+        <ul class="ob-rules">${rules(p.voice_always, 'yes')}${rules(p.voice_never, 'no')}</ul>
+        ${p.language_notes ? `<p class="ob-note" style="margin-top:16px">${esc(p.language_notes)}</p>` : ''}
+      </div>
+      <div class="btn-row ob-finish">
+        <button class="btn lime" data-ob="finish">Start writing</button>
+        <button class="btn ghost" data-ob="restart">Redo the interview</button>
+      </div>`;
+    return;
+  }
+
+  const q = OB_Q[ob.step];
+  const val = ob.answers[q.key] || '';
+  const last = ob.step === OB_Q.length - 1;
+  stage.innerHTML = `
+    <div class="ob-q">
+      <h1 class="h1">${esc(q.q)}</h1>
+      <p class="ob-hint">${esc(q.hint)}</p>
+      ${q.line
+        ? `<input class="input" id="obField" value="${esc(val)}" placeholder="${esc(q.ph)}" autocomplete="off">`
+        : `<textarea class="input ob-area" id="obField" placeholder="${esc(q.ph)}">${esc(val)}</textarea>`}
+      ${q.required ? '' : '<p class="ob-optional">Optional — leave it blank if it does not apply to you.</p>'}
+      <div class="btn-row">
+        ${ob.step ? '<button class="btn ghost" data-ob="prev">Back</button>' : ''}
+        <button class="btn lime" data-ob="next">${last ? 'Build my system' : 'Next'}</button>
+      </div>
+    </div>`;
+  $('#obField').focus();
+}
+
+function obCapture(){
+  const f = $('#obField');
+  if (f && state.onboard?.phase === 'q'){
+    state.onboard.answers[OB_Q[state.onboard.step].key] = f.value.trim();
+    obSave();
+  }
+}
+
+async function obSubmit(){
+  const ob = state.onboard;
+  ob.phase = 'busy';
+  renderOnboard();
+  try {
+    const { data, error } = await sb.functions.invoke('generate-brand-system', { body: { answers: ob.answers } });
+    if (error) throw new Error(await fnError(error));
+    if (data?.error) throw new Error(data.error);
+    if (!Array.isArray(data?.pillars) || !data.pillars.length) throw new Error('No pillars came back. Try again.');
+
+    const uid = state.session.user.id;
+    const { data: saved, error: pErr } = await sb.from('profiles').upsert({
+      id: uid,
+      display_name: ob.answers.name || state.page?.display_name || '',
+      handle: state.page?.handle || '',
+      audience: ob.answers.audience || '',
+      positioning_statement: data.positioning_statement || '',
+      unfair_advantage: data.unfair_advantage || '',
+      voice_always: Array.isArray(data.voice_always) ? data.voice_always : [],
+      voice_never: Array.isArray(data.voice_never) ? data.voice_never : [],
+      language_notes: data.language_notes || '',
+      onboarding_completed: true,
+      updated_at: new Date().toISOString()
+    }).select().single();
+    if (pErr) throw pErr;
+
+    /* Replace rather than append: redoing the interview must not leave the old
+       pillars behind for generate-draft to choose from. */
+    await sb.from('pillars').delete().eq('user_id', uid);
+    const { data: made, error: plErr } = await sb.from('pillars').insert(
+      data.pillars.slice(0, 5).map((pl, i) => ({
+        user_id: uid,
+        name: String(pl.name || '').slice(0, 60),
+        description: String(pl.description || ''),
+        job: String(pl.job || ''),
+        hooks: Array.isArray(pl.hooks) ? pl.hooks.slice(0, 3) : [],
+        sort_order: i
+      }))
+    ).select();
+    if (plErr) throw plErr;
+
+    state.profile = saved;
+    state.pillars = (made || []).sort((a,b) => a.sort_order - b.sort_order);
+    obSave();   // keep the answers so redoing the interview is an edit, not a retype
+    ob.phase = 'done';
+    renderOnboard();
+    toast('Brand system saved');
+  } catch (err){
+    ob.phase = 'error';
+    ob.error = err.message || 'Something went wrong.';
+    renderOnboard();
+  }
+}
+
+$('#obStage').addEventListener('click', e => {
+  const b = e.target.closest('[data-ob]'); if (!b) return;
+  const ob = state.onboard, act = b.dataset.ob;
+
+  if (act === 'skip'){ state.onboardSkipped = true; state.draftFilter = 'draft'; return show('threads'); }
+  if (act === 'finish'){ state.draftFilter = 'draft'; return show('threads'); }
+  if (act === 'start'){ ob.phase = 'q'; ob.step = 0; return renderOnboard(); }
+  if (act === 'prev'){ obCapture(); ob.step--; return renderOnboard(); }
+  if (act === 'back'){ ob.phase = 'q'; ob.step = OB_Q.length - 1; return renderOnboard(); }
+  if (act === 'submit') return obSubmit();
+  if (act === 'restart'){ startOnboard(); state.onboard.phase = 'q'; return renderOnboard(); }
+
+  if (act === 'next'){
+    obCapture();
+    const q = OB_Q[ob.step];
+    if (q.required && (ob.answers[q.key] || '').length < 3){
+      $('#obField').focus();
+      return toast('This one shapes every draft — give it a line.');
+    }
+    if (ob.step === OB_Q.length - 1) return obSubmit();
+    ob.step++;
+    renderOnboard();
+  }
+});
+
+$('#obExit').addEventListener('click', () => { obCapture(); show('links'); });
+
+$('#draftsNote').addEventListener('click', e => {
+  if (!e.target.closest('[data-act="brand"]')) return;
+  startOnboard();
+  state.onboard.phase = 'done';
+  show('onboard');
 });
 
 /* ── AI drafting ──────────────────────────────────────────────────── */
@@ -650,7 +961,7 @@ $('#aiGo').addEventListener('click', async () => {
     /* The key lives on the server; invoke() forwards the session JWT so the
        function can scope voice and quota to this user. */
     const { data, error } = await sb.functions.invoke('generate-draft', { body: { topic } });
-    if (error) throw new Error(error.message || 'Request failed');
+    if (error) throw new Error(await fnError(error));
     if (data?.error) throw new Error(data.error);
 
     const { data: created, error: insErr } = await sb.from('drafts').insert({
@@ -663,7 +974,7 @@ $('#aiGo').addEventListener('click', async () => {
     if (insErr) throw insErr;
 
     state.drafts.unshift(created);
-    state.draftFilter = 'all';
+    state.draftFilter = 'draft';
     state.editingDraft = created.id;
     renderDrafts();
     $('#aiTopic').value = '';
@@ -688,7 +999,7 @@ $('#btnAddDraft').addEventListener('click', async () => {
   }).select().single();
   if (error) return toast('Could not add: ' + error.message);
   state.drafts.unshift(data);
-  state.draftFilter = 'all';
+  state.draftFilter = 'draft';
   state.editingDraft = data.id;
   renderDrafts();
   $(`.draft[data-did="${data.id}"]`)?.scrollIntoView({ behavior:'smooth', block:'center' });
@@ -776,8 +1087,7 @@ $('#btnRefresh').addEventListener('click', async () => {
 
 /* ── Share ────────────────────────────────────────────────────────── */
 $('#btnShare').addEventListener('click', async () => {
-  const url = state.page?.slug && state.mode === 'owner'
-    ? publicUrlFor(state.page.slug) : location.href;
+  const url = state.page?.slug ? publicUrlFor(state.page.slug) : location.href;
   try {
     if (navigator.share){ await navigator.share({ title:'BetterLink', url }); return; }
     await navigator.clipboard.writeText(url); toast('Link copied');

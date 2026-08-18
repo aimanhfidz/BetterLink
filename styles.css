@@ -36,7 +36,7 @@ a{color:inherit;text-decoration:none}
   background:var(--bg);position:relative;overflow:hidden;
   display:flex;flex-direction:column;
 }
-@media (min-width:820px) and (min-height:760px){
+@media (min-width:820px) and (max-width:1023.98px) and (min-height:760px){
   body{background:radial-gradient(120% 90% at 50% 0%,#1A1F1B 0%,#0C0C0C 55%,#070707 100%)}
   #stage{
     height:860px;border-radius:44px;border:1px solid #262626;
@@ -286,12 +286,20 @@ textarea.input{resize:vertical;min-height:76px;line-height:1.45}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* ── Auth / sign-in ───────────────────────────────────────────────── */
-#gate{position:absolute;inset:0;z-index:70;background:var(--bg);display:none;flex-direction:column;justify-content:center;padding:34px 26px}
+#gate{position:absolute;inset:0;z-index:70;background:var(--bg);display:none;
+  flex-direction:column;justify-content:center;padding:34px 26px}
 #gate.on{display:flex}
+.gate-card{width:100%}
 #gate .h1{font-size:30px;margin-bottom:10px}
 #gate p{color:var(--ink-mid);font-size:14px;line-height:1.5;margin-bottom:22px}
 .gate-note{font-size:12.5px;color:var(--ink-dim);margin-top:16px;line-height:1.5}
-.gate-mark{width:54px;height:54px;margin-bottom:22px}
+/* Same mark as the favicon and the app icon tiles, not a bare glyph. */
+.gate-mark{
+  width:58px;height:58px;border-radius:19px;margin-bottom:22px;
+  background:var(--surface-2);border:1px solid var(--line);
+  display:grid;place-items:center;
+}
+.gate-mark svg{width:62%;height:62%;display:block;overflow:visible}
 
 /* ── Status / sync chip ───────────────────────────────────────────── */
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
@@ -404,3 +412,280 @@ body.public .owner-only{display:none}
 .link-btn{display:block;width:100%;text-align:center;margin-top:12px;
   font-size:13px;font-weight:600;color:var(--ink-dim);padding:6px}
 .link-btn:hover{color:var(--ink)}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DESKTOP — no phone frame. Full-width web layout with a left rail.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (min-width:1024px){
+  :root{ --rail-w:248px; --gut:56px; --maxw:1180px; }
+
+  body{
+    display:block;overflow:hidden;
+    background:radial-gradient(120% 90% at 50% 0%,#151815 0%,#0C0C0C 55%,#080808 100%);
+  }
+  #stage{
+    max-width:none;width:100%;height:100%;
+    border:0;border-radius:0;box-shadow:none;background:var(--bg);
+    padding-left:var(--rail-w);
+  }
+
+  /* ── Left rail replaces the bottom pill nav ───────────────────────── */
+  .nav{
+    top:0;right:auto;bottom:0;width:var(--rail-w);height:auto;
+    position:fixed;
+    flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;
+    padding:26px 18px;background:rgba(16,16,16,.72);
+    border-right:1px solid var(--line);
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  }
+  .nav::before{
+    content:"BetterLink";display:block;
+    font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--ink);
+    padding:6px 14px 22px;pointer-events:none;
+  }
+  .nav-inner{
+    flex-direction:column;align-items:stretch;gap:4px;width:100%;
+    background:none;border:0;border-radius:0;padding:0;backdrop-filter:none;
+  }
+  .tab{
+    width:100%;justify-content:flex-start;gap:12px;
+    padding:12px 14px;border-radius:14px;font-size:14.5px;
+  }
+  .tab span{display:inline}
+  .tab:hover{background:var(--surface);color:var(--ink)}
+  .tab svg{width:19px;height:19px}
+
+  /* ── Content column ───────────────────────────────────────────────── */
+  .screen{padding:0 var(--gut) 80px;min-width:0}
+  .view{width:100%;max-width:var(--maxw);margin:0 auto}
+  .topbar{
+    padding:30px 0 14px;gap:12px;
+    background:linear-gradient(var(--bg) 78%,transparent);
+    max-width:var(--maxw);margin:0 auto;
+  }
+  .topbar .title{font-size:22px}
+  .section-title{font-size:17px;margin:38px 0 16px}
+
+  /* ── Profile header goes wide ─────────────────────────────────────── */
+  .profile{
+    padding:18px 0 10px;display:grid;grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;column-gap:48px;row-gap:18px;
+  }
+  .avatar-row{grid-column:1;gap:22px}
+  .avatar{width:104px;height:104px;border-radius:32px;font-size:38px}
+  .avatar .spark svg{width:52px;height:52px}
+  .name-block .h1{font-size:44px}
+  .handle{font-size:15px;margin-top:6px}
+  .bio{grid-column:1;font-size:16px;max-width:62ch;margin-top:0}
+  .socials{grid-column:2;grid-row:1 / span 2;margin-top:0;
+    justify-content:flex-end;flex-wrap:nowrap;max-width:none}
+  .social{width:48px;height:48px;border-radius:16px}
+  .social svg{width:21px;height:21px}
+
+  /* ── Cards flow into columns instead of one tall stack ────────────── */
+  #featured,.links{
+    display:grid;grid-template-columns:repeat(2,minmax(300px,1fr));
+    gap:18px;align-items:start;
+  }
+  .link-card{padding:20px 22px}
+  .link-card.feature{padding:26px 24px;min-height:150px}
+  .feature .h2{font-size:24px}
+  .empty{grid-column:1 / -1;padding:44px 24px;max-width:620px;margin:0 auto}
+
+  /* ── Stats ────────────────────────────────────────────────────────── */
+  .stat-grid{grid-template-columns:repeat(4,minmax(150px,1fr));gap:18px}
+  .stat{min-height:150px;padding:20px}
+  .stat .value{font-size:clamp(28px,2.4vw,36px)}
+  .stat .label{font-size:11.5px}
+  .stat .delta{font-size:12.5px}
+  /* The full-width chart sits mid-list in the DOM, so on a 4-up grid it
+     could not fit its row and left two empty cells. Order it last. */
+  .stat-grid > .stat{order:0}
+  .stat-grid > .stat.wide{order:1;min-height:0;justify-content:flex-start}
+  .stat.wide .spark{height:120px;margin-top:18px}
+  .rank{gap:12px}
+  .rank-row{padding:16px 20px}
+  .rank-row .rk{font-size:12px;width:22px}
+  .rank-row .nm{font-size:15px}
+  .rank-row .vl{font-size:14px;font-variant-numeric:tabular-nums}
+  .rank-track{height:6px;margin-top:11px}
+
+  /* ── Threads studio ───────────────────────────────────────────────── */
+  #drafts{display:grid;grid-template-columns:repeat(2,minmax(360px,1fr));gap:18px;align-items:stretch}
+  /* Cards in a row share a height, so the action rows line up. */
+  #drafts .draft{margin-bottom:0;padding:18px;display:flex;flex-direction:column}
+  #drafts .draft .acts{margin-top:auto;padding-top:14px}
+  #draftsNote{grid-column:1 / -1}
+  #drafts .empty{grid-column:1 / -1}
+  .ai-panel{max-width:760px}
+  .ai-panel .btn-row{max-width:260px}
+  .filters{margin:10px 0 0;gap:8px}
+  .draft .hook{font-size:16px}
+  .draft .body{font-size:14px;margin-top:9px}
+  /* Posts run 700-1200 chars, so one long draft used to set the height of
+     its whole row. Preview is clamped side by side; Edit shows it in full. */
+  #drafts .draft:not(.editing) .body{
+    display:-webkit-box;-webkit-line-clamp:9;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .draft .acts{gap:9px}
+  .draft .acts .btn{white-space:nowrap;padding:10px 12px}
+
+  /* ── Editor: a form, so one readable column — not a card grid.
+        Two columns broke as soon as a link was expanded: the open card
+        stretched its row and left a dead gap beside it. ──────────────── */
+  #view-edit{max-width:880px}
+  #view-edit .section-title{margin:34px 0 14px}
+  #editList,#editSocials{display:block}
+  #editList > .card,#editSocials > .card{margin-top:0;margin-bottom:14px}
+  #editList > .card:last-child,#editSocials > .card:last-child{margin-bottom:0}
+  #view-edit .card{padding:18px}
+  #view-edit .card + .card{margin-top:14px}
+  #view-edit .field{margin-bottom:15px}
+  #view-edit .field:last-child{margin-bottom:0}
+  #view-edit .collapse{margin-top:18px;padding-top:18px}
+  #view-edit .edit-row{gap:14px}
+  #view-edit .swatches{gap:9px}
+  #view-edit .sw{width:34px;height:34px;border-radius:11px}
+  #view-edit .urlbox{padding:13px 15px;margin-top:14px}
+  #btnAdd,#btnAddSocial{width:auto;min-width:220px;margin-top:16px}
+  #view-edit > .card .btn-row{max-width:420px}
+
+  /* ── Toast sits by the content, not the phone's centre ────────────── */
+  #toast{position:fixed;left:auto;right:32px;bottom:32px;transform:translateY(16px)}
+  #toast.on{transform:translateY(0)}
+
+  /* ── Splash + gate: centred web hero, no phone column ─────────────── */
+  #splash{
+    left:0;padding:40px 60px;z-index:90;
+    display:grid;grid-template-columns:minmax(280px,380px) minmax(0,600px);
+    grid-template-rows:auto auto auto;
+    align-content:center;justify-content:center;column-gap:80px;
+    background:radial-gradient(90% 120% at 20% 0%,#16191A 0%,var(--bg) 60%);
+  }
+  .splash-art{grid-column:1;grid-row:1 / span 3;width:100%;align-self:center}
+  .splash-art svg{width:100%;max-width:400px}
+  #splash > .eyebrow{grid-column:2;grid-row:1;align-self:end;
+    font-size:12.5px;letter-spacing:.22em;color:var(--ink-mid);margin-bottom:18px!important}
+  #splash .h1{grid-column:2;grid-row:2;font-size:50px;line-height:1.04}
+  #splash .btn{grid-column:2;grid-row:3;justify-self:start;width:auto;
+    min-width:220px;padding:16px 32px;font-size:15px;margin-top:34px}
+  #gate{
+    left:0;align-items:center;justify-content:center;padding:48px;
+    background:radial-gradient(90% 120% at 20% 0%,#16191A 0%,var(--bg) 60%);
+  }
+  .gate-card{
+    max-width:452px;padding:40px 36px;
+    background:var(--surface);border:1px solid var(--line);border-radius:30px;
+    box-shadow:0 30px 80px rgba(0,0,0,.45);
+  }
+  .gate-card .gate-mark{width:64px;height:64px;border-radius:21px;margin-bottom:26px}
+  #gate .h1{font-size:32px;margin-bottom:12px}
+  #gate p{font-size:14.5px;margin-bottom:24px}
+  #gate .btn.block{padding:15px 20px}
+  #gate .link-btn{margin-top:14px;padding:8px}
+  #gate .field{margin-top:18px;margin-bottom:14px}
+  #gate .gate-note{margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+  /* Surface-on-surface reads flat inside the card, so lift the controls. */
+  #gate .btn.ghost,#gate .input{background:var(--surface-2)}
+  #gate .input:focus{border-color:var(--lime)}
+
+  /* ── Public visitor page: no rail, single centred column ──────────── */
+  body.public #stage{padding-left:0}
+  body.public .screen{padding:0 var(--gut) 60px}
+  body.public .view,body.public .topbar{max-width:760px}
+  body.public .links,body.public #featured{grid-template-columns:minmax(0,1fr)}
+  body.public .empty{max-width:none}
+  body.public .profile{grid-template-columns:minmax(0,1fr);gap:0}
+  body.public .socials{grid-column:1;grid-row:auto;justify-content:flex-start;max-width:none;margin-top:18px}
+}
+
+/* Extra-wide screens get a third column of links. */
+@media (min-width:1500px){
+  :root{ --maxw:1340px; }
+  body:not(.public) .links{grid-template-columns:repeat(3,minmax(300px,1fr))}
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   BRAND ONBOARDING — the first-run interview behind Threads drafts
+   ══════════════════════════════════════════════════════════════════════ */
+.ob-step{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink-dim);
+  font-variant-numeric:tabular-nums;flex:none}
+.ob-track{height:3px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin:0 2px 26px}
+.ob-track i{display:block;height:100%;width:14%;border-radius:99px;background:var(--lime);
+  transition:width .4s cubic-bezier(.2,.8,.3,1)}
+
+.ob-mark{
+  width:56px;height:56px;border-radius:18px;display:grid;place-items:center;
+  background:var(--surface-2);border:1px solid var(--line);margin-bottom:24px;
+}
+.ob-mark svg{width:26px;height:26px;color:var(--pink)}
+.ob-mark.spin svg{animation:spin 4.5s linear infinite}
+
+.ob-hero{padding:14px 2px 0}
+.ob-hero.tight{padding-bottom:8px}
+.ob-hero .h1{margin-bottom:18px}
+.ob-lede{color:var(--ink-mid);font-size:14.5px;line-height:1.55;margin-bottom:14px;max-width:52ch}
+.ob-lede.dim{color:var(--ink-dim);font-size:13px}
+.ob-hero .btn.block{margin-top:12px}
+
+.ob-busy{padding:14px 2px 0}
+.ob-busy .h2{margin-bottom:10px}
+.ob-busy .skel{margin-top:14px}
+.ob-error{margin-top:8px}
+
+/* ── One question at a time ───────────────────────────────────────── */
+.ob-q{padding:4px 2px 0}
+.ob-q .h1{font-size:28px;line-height:1.12;margin-bottom:12px}
+.ob-hint{color:var(--ink-mid);font-size:13.5px;line-height:1.55;margin-bottom:20px;max-width:48ch}
+textarea.ob-area{min-height:150px;font-size:15px;line-height:1.55}
+.ob-optional{color:var(--ink-dim);font-size:12px;margin-top:9px}
+.ob-q .btn-row{margin-top:20px}
+
+/* ── The finished system ──────────────────────────────────────────── */
+.ob-cap{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+.ob-quote{border-color:#33372F;background:linear-gradient(180deg,#161A15,var(--surface))}
+.ob-positioning{font-size:18px;line-height:1.42;font-weight:600;letter-spacing:-.01em;margin-top:9px}
+.ob-note{color:var(--ink-mid);font-size:13.5px;line-height:1.55;margin-top:7px}
+
+.ob-pillars{display:flex;flex-direction:column;gap:11px}
+.ob-pillar-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ob-pillar-top .h2{font-size:17px}
+.ob-pillar .tag{flex:none}
+.ob-hook{
+  font-size:13px;line-height:1.45;color:var(--ink);margin-top:9px;padding:10px 12px;
+  background:var(--surface-2);border-radius:12px;border-left:2px solid var(--pink);
+}
+
+.ob-rules{list-style:none;display:flex;flex-direction:column;gap:10px}
+.ob-rules li{position:relative;padding-left:26px;font-size:13.5px;line-height:1.5;color:var(--ink-mid)}
+.ob-rules li::before{position:absolute;left:0;top:0;font-weight:800;font-size:13px}
+.ob-rules li.yes::before{content:"✓";color:var(--lime)}
+.ob-rules li.no::before{content:"✕";color:#FF5A5A}
+.ob-finish{margin-top:22px}
+
+/* ── Drafts studio: the voice line above the list ─────────────────── */
+.voice-line{
+  display:flex;align-items:center;gap:10px;margin:14px 0 0;padding:12px 14px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
+}
+.voice-line p{flex:1;min-width:0;font-size:12.5px;color:var(--ink-mid);line-height:1.45;
+  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.voice-line button{font-size:12px;font-weight:700;color:var(--ink-dim);flex:none;padding:4px}
+.voice-line button:hover{color:var(--ink)}
+
+@media (min-width:1024px){
+  #view-onboard{max-width:760px}
+  .ob-track{margin-bottom:34px}
+  .ob-mark{width:64px;height:64px;border-radius:21px;margin-bottom:28px}
+  .ob-mark svg{width:30px;height:30px}
+  .ob-hero .h1,.ob-q .h1{font-size:38px}
+  .ob-lede{font-size:15.5px}
+  .ob-hint{font-size:14.5px;margin-bottom:24px}
+  textarea.ob-area{min-height:170px;font-size:15.5px}
+  .ob-hero .btn.block{width:auto;min-width:260px;display:flex}
+  .ob-hero .link-btn{text-align:left;width:auto;display:inline-block}
+  .ob-q .btn-row .btn,.ob-finish .btn{flex:0 0 auto;min-width:170px}
+  .ob-positioning{font-size:21px}
+  .ob-pillars{display:grid;grid-template-columns:repeat(2,minmax(280px,1fr));gap:14px;align-items:start}
+  .ob-quote{padding:22px}
+}
