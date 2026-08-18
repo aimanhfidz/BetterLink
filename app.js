@@ -1223,8 +1223,15 @@ async function boot(){
   state.session = session;
 
   if (!session){
+    /* The pre-paint script may have hidden the splash on the strength of a
+       stored token that turns out to be dead, and signing out reloads with
+       bl.splash still set — either way, show the front door rather than an
+       empty console. The gate opens only on request or on failure. */
+    document.documentElement.classList.remove('no-splash');
+    $('#splash').classList.remove('gone');
+    try { sessionStorage.removeItem('bl.splash') } catch {}
     setChip('local','signed out');
-    return;   // splash stays up; the gate opens only on request or on failure
+    return;
   }
 
   /* Already signed in: the front door has served its purpose. */
@@ -1243,7 +1250,9 @@ async function boot(){
 }
 
 sb.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_IN' && !state.session) location.replace(location.pathname);
+  if (event !== 'SIGNED_IN' || state.session) return;
+  if (!/[?&#](code|access_token)=/.test(location.search + location.hash)) return;
+  location.replace(location.pathname);
 });
 
 boot();

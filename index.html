@@ -8,6 +8,27 @@
 <meta name="theme-color" content="#0A0A0A">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230A0A0A'/><path d='M50 8Q52 48 92 50Q52 52 50 92Q48 52 8 50Q48 48 50 8Z' fill='%23FF52A8'/></svg>">
 <link rel="stylesheet" href="/styles.css">
+<script>
+/* Runs before the first paint, and deliberately not in the module.
+   The splash ships in the markup, but the code that decides whether to show it
+   sits behind an ES module chain fetched from a CDN — so without this it flashes
+   on screen and then vanishes: on every public page, and on every load for
+   someone already signed in. Decide here from what is knowable synchronously. */
+(function(){
+  try {
+    var hide = /^\/u\//.test(location.pathname)
+            || new URLSearchParams(location.search).has('u')
+            || sessionStorage.getItem('bl.splash');
+    if (!hide){
+      /* Match the project ref rather than hard-coding it. */
+      for (var i = 0; i < localStorage.length; i++){
+        if (/^sb-.+-auth-token$/.test(localStorage.key(i))){ hide = true; break; }
+      }
+    }
+    if (hide) document.documentElement.classList.add('no-splash');
+  } catch (e) {}
+})();
+</script>
 </head>
 <body>
 <div id="stage">
