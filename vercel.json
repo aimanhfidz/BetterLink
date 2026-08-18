@@ -2,6 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
     {
+      "source": "/",
+      "has": [{ "type": "host", "value": "betterlink-aiman-hafidz.vercel.app" }],
+      "destination": "https://betterlink.vercel.app/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "betterlink-aiman-hafidz.vercel.app" }],
       "destination": "https://betterlink.vercel.app/:path*",
