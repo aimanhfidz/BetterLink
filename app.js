@@ -788,6 +788,12 @@ function renderOnboard(){
     const p = state.profile || {};
     const rules = (arr, cls) => (Array.isArray(arr) ? arr : [])
       .map(r => `<li class="${cls}">${esc(r)}</li>`).join('');
+    /* The answers survive in localStorage, so rebuilding need not mean
+       retyping all seven. Only offered when the required ones are still
+       there — on a fresh device or after a clear, they are not. */
+    const kept = obLoad();
+    const canRebuild = OB_Q.filter(q => q.required)
+      .every(q => (kept[q.key] || '').trim().length >= 3);
     stage.innerHTML = `
       <div class="ob-hero tight">
         <div class="ob-mark">${svg('star')}</div>
@@ -819,6 +825,7 @@ function renderOnboard(){
       </div>
       <div class="btn-row ob-finish">
         <button class="btn lime" data-ob="finish">Start writing</button>
+        ${canRebuild ? '<button class="btn ghost" data-ob="rebuild">Rebuild from my answers</button>' : ''}
         <button class="btn ghost" data-ob="restart">Redo the interview</button>
       </div>`;
     return;
@@ -916,6 +923,9 @@ $('#obStage').addEventListener('click', e => {
   if (act === 'back'){ ob.phase = 'q'; ob.step = OB_Q.length - 1; return renderOnboard(); }
   if (act === 'submit') return obSubmit();
   if (act === 'restart'){ startOnboard(); state.onboard.phase = 'q'; return renderOnboard(); }
+  /* Same generation the interview ends with, run straight off the saved
+     answers — this is the way back in once onboarding_completed is set. */
+  if (act === 'rebuild'){ startOnboard(); return obSubmit(); }
 
   if (act === 'next'){
     obCapture();
