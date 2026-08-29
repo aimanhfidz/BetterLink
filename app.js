@@ -906,9 +906,14 @@ function renderOnboard(){
     <div class="ob-q">
       <h1 class="h1">${esc(q.q)}</h1>
       <p class="ob-hint">${esc(q.hint)}</p>
-      ${q.line
+      ${/* The example sits above the field rather than inside it: as a placeholder
+             it disappears at the first keystroke, which is exactly when someone is
+             still working out how much detail to give. A one-line name field is
+             short enough to keep its placeholder. */
+        q.line
         ? `<input class="input" id="obField" value="${esc(val)}" placeholder="${esc(q.ph)}" autocomplete="off">`
-        : `<textarea class="input ob-area" id="obField" placeholder="${esc(q.ph)}">${esc(val)}</textarea>`}
+        : `<div class="ob-example"><span class="ob-cap">For example</span><p>${esc(q.ph)}</p></div>
+           <textarea class="input ob-area" id="obField">${esc(val)}</textarea>`}
       ${q.required ? '' : '<p class="ob-optional">Optional — leave it blank if it does not apply to you.</p>'}
       <div class="btn-row">
         ${ob.step ? '<button class="btn ghost" data-ob="prev">Back</button>' : ''}

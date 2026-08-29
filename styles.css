@@ -689,6 +689,11 @@ body.public .owner-only{display:none}
 .ob-hint{color:var(--ink-mid);font-size:13.5px;line-height:1.55;margin-bottom:20px;max-width:48ch}
 textarea.ob-area{min-height:150px;font-size:15px;line-height:1.55}
 .ob-optional{color:var(--ink-dim);font-size:12px;margin-top:9px}
+.ob-example{
+  margin-bottom:14px;padding:12px 14px;background:var(--surface-2);
+  border-radius:14px;border-left:2px solid var(--accent);max-width:60ch;
+}
+.ob-example p{color:var(--ink-mid);font-size:13.5px;line-height:1.55;margin-top:6px}
 .ob-q .btn-row{margin-top:20px}
 
 /* ── The finished system ──────────────────────────────────────────── */
