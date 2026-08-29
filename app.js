@@ -108,6 +108,7 @@ const state = {
   drafts: [],
   draftFilter: 'draft',   // the studio opens on unposted work, not the archive
   editingDraft: null,
+  editingPillar: null,
   viewSlug: null,
   profile: null,          // brand system: voice, positioning, audience
   pillars: [],
@@ -731,6 +732,53 @@ function startOnboard(){
   };
 }
 
+/* The generated system is a starting point, not a verdict, so pillars are
+   editable in place. generate-draft reads name, job, description and hooks on
+   every draft it writes — editing here changes what the next draft is written
+   against, which is why the studio links back to this screen. */
+const PILLAR_HOOKS_USED = 3;   // generate-draft reads the first three
+
+function pillarCardHTML(pl, i){
+  const hooks = Array.isArray(pl.hooks) ? pl.hooks : [];
+  const first = i === 0, last = i === state.pillars.length - 1;
+
+  if (state.editingPillar !== pl.id){
+    return `<div class="card ob-pillar" data-plid="${pl.id}">
+      <div class="ob-pillar-top">
+        <div class="h2">${esc(pl.name) || '<span style="opacity:.4">Untitled pillar</span>'}</div>
+        <div class="ob-pillar-side">
+          ${pl.job ? `<span class="tag pillar">${esc(pl.job)}</span>` : ''}
+          <div class="grip">
+            <button data-pact="up" ${first ? 'disabled' : ''} aria-label="Move up">
+              <svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+            <button data-pact="down" ${last ? 'disabled' : ''} aria-label="Move down">
+              <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+          </div>
+        </div>
+      </div>
+      ${pl.description ? `<p class="ob-note">${esc(pl.description)}</p>` : ''}
+      ${hooks.slice(0, PILLAR_HOOKS_USED).map(h => `<div class="ob-hook">${esc(h)}</div>`).join('')}
+      <div class="btn-row"><button class="btn ghost" data-pact="edit">Edit</button></div>
+    </div>`;
+  }
+
+  return `<div class="card ob-pillar editing" data-plid="${pl.id}">
+    <div class="field"><label>Name</label>
+      <input class="input" data-pf="name" value="${esc(pl.name)}" placeholder="What this pillar is called"></div>
+    <div class="field"><label>Job</label>
+      <input class="input" data-pf="job" value="${esc(pl.job)}" placeholder="Credibility, Engagement, Trust, Relatability, or a hybrid"></div>
+    <div class="field"><label>Description</label>
+      <textarea class="input" data-pf="description" placeholder="One line on what this pillar covers">${esc(pl.description)}</textarea></div>
+    <div class="field" style="margin-bottom:4px"><label>Hooks — one per line</label>
+      <textarea class="input big" data-pf="hooks" placeholder="Write them the way you actually talk">${esc(hooks.join('\n'))}</textarea></div>
+    <p class="ob-optional">Drafting reads the first ${PILLAR_HOOKS_USED}.</p>
+    <div class="btn-row">
+      <button class="btn lime" data-pact="done">Done</button>
+      <button class="btn danger" data-pact="del">Delete</button>
+    </div>
+  </div>`;
+}
+
 function renderOnboard(){
   if (!state.onboard) startOnboard();
   const ob = state.onboard;
@@ -806,18 +854,13 @@ function renderOnboard(){
           <p class="ob-note">${esc(p.unfair_advantage)}</p>` : ''}
       </div>
       <div class="section-title">Your pillars<span class="count">${state.pillars.length} total</span></div>
-      <div class="ob-pillars">
-        ${state.pillars.map(pl => `
-          <div class="card ob-pillar">
-            <div class="ob-pillar-top">
-              <div class="h2">${esc(pl.name)}</div>
-              ${pl.job ? `<span class="tag pillar">${esc(pl.job)}</span>` : ''}
-            </div>
-            ${pl.description ? `<p class="ob-note">${esc(pl.description)}</p>` : ''}
-            ${(Array.isArray(pl.hooks) ? pl.hooks : []).slice(0,3)
-              .map(h => `<div class="ob-hook">${esc(h)}</div>`).join('')}
-          </div>`).join('')}
-      </div>
+      <div class="ob-pillars">${
+        state.pillars.map((pl, i) => pillarCardHTML(pl, i)).join('') ||
+        `<div class="empty"><strong>No pillars yet</strong>Add one below, or redo the interview to have them written for you.</div>`
+      }</div>
+      <button class="btn ghost block" data-ob="addpillar" style="margin-top:12px">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add pillar
+      </button>
       <div class="section-title">Your voice</div>
       <div class="card">
         <ul class="ob-rules">${rules(p.voice_always, 'yes')}${rules(p.voice_never, 'no')}</ul>
@@ -901,6 +944,7 @@ async function obSubmit(){
 
     state.profile = saved;
     state.pillars = (made || []).sort((a,b) => a.sort_order - b.sort_order);
+    state.editingPillar = null;
     obSave();   // keep the answers so redoing the interview is an edit, not a retype
     ob.phase = 'done';
     renderOnboard();
@@ -912,12 +956,86 @@ async function obSubmit(){
   }
 }
 
+async function addPillar(){
+  const { data, error } = await sb.from('pillars').insert({
+    user_id: state.session.user.id,
+    name: '', description: '', job: '', hooks: [], sort_order: state.pillars.length
+  }).select().single();
+  if (error) return toast('Could not add: ' + error.message);
+  state.pillars.push(data);
+  state.editingPillar = data.id;
+  renderOnboard();
+  focusPillar(data.id);
+}
+
+function focusPillar(id){
+  const card = $(`.ob-pillar[data-plid="${id}"]`);
+  card?.scrollIntoView({ behavior:'smooth', block:'center' });
+  card?.querySelector('[data-pf="name"]')?.focus();
+}
+
+async function pillarAction(id, act){
+  const i = state.pillars.findIndex(p => p.id === id);
+  if (i < 0) return;
+
+  if (act === 'up' || act === 'down'){
+    const j = act === 'up' ? i - 1 : i + 1;
+    if (j < 0 || j >= state.pillars.length) return;
+    [state.pillars[j], state.pillars[i]] = [state.pillars[i], state.pillars[j]];
+    /* Order is not cosmetic: generate-draft reads the pillars in this order,
+       so the whole list is renumbered and written the way the links editor
+       does it, rather than swapping two rows and hoping the rest still line up. */
+    state.pillars.forEach((p, idx) => { p.sort_order = idx; });
+    renderOnboard();
+    setChip('local', 'saving…');
+    const results = await Promise.all(state.pillars.map(p =>
+      sb.from('pillars').update({ sort_order: p.sort_order }).eq('id', p.id)));
+    const failed = results.find(r => r.error);
+    if (failed) { setChip('err', 'error'); return toast('Could not reorder: ' + failed.error.message); }
+    setChip('live', 'saved');
+    return;
+  }
+  if (act === 'edit'){ state.editingPillar = id; renderOnboard(); return focusPillar(id); }
+  if (act === 'done'){ state.editingPillar = null; return renderOnboard(); }
+  if (act === 'del'){
+    /* Deleting is a real change to what gets written, not just a tidy-up:
+       generate-draft picks the pillar for every draft off this list. */
+    if (!confirm(`Delete "${state.pillars[i].name || 'this pillar'}"? New drafts stop using it.`)) return;
+    const { error } = await sb.from('pillars').delete().eq('id', id);
+    if (error) return toast('Delete failed: ' + error.message);
+    state.pillars.splice(i, 1);
+    state.editingPillar = null;
+    renderOnboard();
+    toast('Pillar deleted');
+  }
+}
+
+/* Hooks are a jsonb array in the database but a block of lines in the field —
+   blank lines are dropped so a stray return never becomes an empty hook. */
+$('#obStage').addEventListener('input', e => {
+  const card = e.target.closest('.ob-pillar[data-plid]');
+  const f = e.target.dataset.pf;
+  if (!card || !f) return;
+  const pl = state.pillars.find(p => p.id === card.dataset.plid);
+  if (!pl) return;
+  const val = f === 'hooks'
+    ? e.target.value.split('\n').map(h => h.trim()).filter(Boolean)
+    : e.target.value;
+  pl[f] = val;
+  queueSave('pillars', pl.id, { [f]: val });
+});
+
 $('#obStage').addEventListener('click', e => {
+  const pcard = e.target.closest('.ob-pillar[data-plid]');
+  const pbtn = e.target.closest('[data-pact]');
+  if (pcard && pbtn) return pillarAction(pcard.dataset.plid, pbtn.dataset.pact);
+
   const b = e.target.closest('[data-ob]'); if (!b) return;
   const ob = state.onboard, act = b.dataset.ob;
 
   if (act === 'skip'){ state.onboardSkipped = true; state.draftFilter = 'draft'; return show('threads'); }
   if (act === 'finish'){ state.draftFilter = 'draft'; return show('threads'); }
+  if (act === 'addpillar') return addPillar();
   if (act === 'start'){ ob.phase = 'q'; ob.step = 0; return renderOnboard(); }
   if (act === 'prev'){ obCapture(); ob.step--; return renderOnboard(); }
   if (act === 'back'){ ob.phase = 'q'; ob.step = OB_Q.length - 1; return renderOnboard(); }

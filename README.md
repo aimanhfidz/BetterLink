@@ -37,7 +37,10 @@ BetterLink, which is the main app; the Threads tool folded into it.
 - `link_socials` — the icon row
 - `link_events` — append-only view/click log
 - `drafts` — Threads posts (pillar, day, hook, body, status)
-- `profiles`, `pillars` — private brand strategy, owner-only
+- `profiles`, `pillars` — private brand strategy, owner-only. Claude writes both
+  at onboarding; the brand-system screen then edits pillars by hand, so a
+  generated system is a starting point rather than the last word. `generate-draft`
+  reads whatever is there at the time, and uses the first three hooks per pillar.
 
 Row-level security is the whole security model:
 
@@ -68,11 +71,22 @@ reliably match a `/**` pattern.
 
 ## Local development
 
-    node dev-server.js ./BetterLink 4173
+    python3 dev-server.py ./BetterLink 4173
+
+Then open <http://localhost:4173>. `dev-server.js` is the identical Node
+version, kept for machines that have Node; this one needs nothing but the
+python3 that ships with macOS.
 
 The dev server mirrors the `/u/:slug` rewrite. It does **not** mirror every
 Vercel behaviour, so routing changes are worth re-checking against a real
 deployment before trusting them.
+
+Start it from a terminal, not from the editor's preview runner. The project
+lives under `~/Desktop`, which macOS keeps behind a file-access prompt, and a
+server the preview runner launches itself is denied every read and 404s on
+every file. `.claude/launch.json` therefore has no command in it — it only
+attaches the preview pane to `http://localhost:4173`, so start the server
+first, then open the preview.
 
 ## Known gaps
 

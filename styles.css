@@ -706,6 +706,14 @@ textarea.ob-area{min-height:150px;font-size:15px;line-height:1.55}
   background:var(--surface-2);border-radius:12px;border-left:2px solid var(--pink);
 }
 
+.ob-pillar.editing{border-color:var(--lime)}
+.ob-pillar-side{display:flex;align-items:center;gap:8px;flex:none}
+.ob-pillar .grip{flex-direction:row;gap:4px}
+.ob-pillar .btn-row .btn{padding:10px 14px;font-size:13px}
+.ob-pillar textarea.input{min-height:60px}
+.ob-pillar textarea.input.big{min-height:96px}
+.ob-pillar .ob-optional{margin-bottom:2px}
+
 .ob-rules{list-style:none;display:flex;flex-direction:column;gap:10px}
 .ob-rules li{position:relative;padding-left:26px;font-size:13.5px;line-height:1.5;color:var(--ink-mid)}
 .ob-rules li::before{position:absolute;left:0;top:0;font-weight:800;font-size:13px}
