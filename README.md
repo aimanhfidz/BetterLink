@@ -37,7 +37,10 @@ BetterLink, which is the main app; the Threads tool folded into it.
 - `link_socials` — the icon row
 - `link_events` — append-only view/click log
 - `drafts` — Threads posts (pillar, day, hook, body, status)
-- `profiles`, `pillars` — private brand strategy, owner-only. Claude writes both
+- `profiles`, `pillars` — private brand strategy, owner-only. `profiles.audience`
+  holds a reader avatar, not a category: the interview asks who they are, what
+  they already try, what they say to themselves, and what they follow, and the
+  four answers are stitched into one labelled block. Claude writes both tables
   at onboarding; the brand-system screen then edits pillars by hand, so a
   generated system is a starting point rather than the last word. `generate-draft`
   reads whatever is there at the time, and uses the first three hooks per pillar.

@@ -685,10 +685,27 @@ const OB_Q = [
     q:'What name do you write under?',
     hint:'The drafts speak as you, so this is the name they carry.',
     ph:'Aiman Hafidz' },
+  /* The audience is asked as four passes over one person rather than one
+     question about a category: who they are, what they already do, what they
+     say to themselves, and what they follow. The quotes in particular are what
+     hooks get built from, so they are worth their own screen. All four are
+     stitched back into a single `audience` field — see composeAudience(). */
   { key:'audience', required:true,
-    q:'Who are you writing for?',
-    hint:'Be specific. "Everyone" writes to no one — name the person you picture reading it.',
-    ph:'Malaysian founders doing their first RM10k month, mostly running things alone.' },
+    q:'Who is your dream audience?',
+    hint:'One person, not a category. Age, where they are, what they do for money, how they actually talk.',
+    ph:'Lelaki 25-35, Melayu, baru kahwin, ada anak kecil. Buat RM4k-10k sebulan — café kecil, jual gym gear, atau side hustle frozen food dari rumah. Cakap Melayu campur sikit English.' },
+  { key:'audienceBehaviour',
+    q:'What are they already trying?',
+    hint:'What they have had a go at, what they avoid, where they get stuck. A hook interrupts this, so the more specific the better.',
+    ph:'Pernah boost post RM10-50 tapi tak faham result. Takut buka Ads Manager sebab takut bazir budget. Join kelas kalau free dan nampak real.' },
+  { key:'audienceTriggers', required:true,
+    q:'What do they say to themselves?',
+    hint:'Their words, not a summary of them — the line they think at 1am. This is the raw material for hooks.',
+    ph:'“Aku pun boleh buat sendiri kalau ada orang ajar simple-simple.” “Kalau rugi RM100, memang tak boleh tidur.” “Aku bukan tak rajin, aku cuma tak nak benda yang draggy.”' },
+  { key:'audienceInterests',
+    q:'Who and what do they already follow?',
+    hint:'Pages, groups, tools, the accounts they quietly copy. It tells you what they already believe before you say anything.',
+    ph:'Biz tips kat Threads dan TikTok. Group FB peniaga area sendiri. Guna Canva, Shopee Seller Centre, Meta Business Suite.' },
   { key:'background',
     q:'What have you actually done?',
     hint:'Roles, years, things you built or ran. This is where credibility comes from.',
@@ -723,6 +740,9 @@ function startOnboard(){
     answers: {
       name: pick('name') || state.page?.display_name || '',
       audience: pick('audience'),
+      audienceBehaviour: pick('audienceBehaviour'),
+      audienceTriggers: pick('audienceTriggers'),
+      audienceInterests: pick('audienceInterests'),
       background: pick('background'),
       businesses: pick('businesses'),
       failure: pick('failure'),
@@ -794,10 +814,10 @@ function renderOnboard(){
       <div class="ob-hero">
         <div class="ob-mark">${svg('star')}</div>
         <h1 class="h1">First — how do<br>you actually sound?</h1>
-        <p class="ob-lede">Seven questions about your work, your people, and the way you talk.
+        <p class="ob-lede">${OB_Q.length} questions about your work, your people, and the way you talk.
           They become your positioning, five content pillars and a set of voice rules, and every
           draft after this is written to them.</p>
-        <p class="ob-lede dim">About three minutes. None of it is published — it is only ever
+        <p class="ob-lede dim">About five minutes. None of it is published — it is only ever
           used to write your drafts.</p>
         <button class="btn lime block" data-ob="start">${answered ? 'Pick up where you left off' : 'Start'}</button>
         <button class="link-btn" data-ob="skip">Skip for now</button>
@@ -893,6 +913,23 @@ function renderOnboard(){
   $('#obField').focus();
 }
 
+/* The four audience answers are one idea — who this is written for — so they
+   are stitched back into the single `audience` field that generate-brand-system
+   takes and profiles.audience stores, which generate-draft then reads on every
+   draft. Labelled, because unlabelled the quotes stop reading as quotes. */
+const AUDIENCE_PARTS = [
+  ['audience', 'Who they are'],
+  ['audienceBehaviour', 'What they already do'],
+  ['audienceTriggers', 'What they say to themselves'],
+  ['audienceInterests', 'What they follow and use']
+];
+function composeAudience(a){
+  return AUDIENCE_PARTS
+    .filter(([k]) => (a[k] || '').trim())
+    .map(([k, label]) => `${label}: ${a[k].trim()}`)
+    .join('\n');
+}
+
 function obCapture(){
   const f = $('#obField');
   if (f && state.onboard?.phase === 'q'){
@@ -906,7 +943,8 @@ async function obSubmit(){
   ob.phase = 'busy';
   renderOnboard();
   try {
-    const { data, error } = await sb.functions.invoke('generate-brand-system', { body: { answers: ob.answers } });
+    const answers = { ...ob.answers, audience: composeAudience(ob.answers) };
+    const { data, error } = await sb.functions.invoke('generate-brand-system', { body: { answers } });
     if (error) throw new Error(await fnError(error));
     if (data?.error) throw new Error(data.error);
     if (!Array.isArray(data?.pillars) || !data.pillars.length) throw new Error('No pillars came back. Try again.');
@@ -916,7 +954,7 @@ async function obSubmit(){
       id: uid,
       display_name: ob.answers.name || state.page?.display_name || '',
       handle: state.page?.handle || '',
-      audience: ob.answers.audience || '',
+      audience: answers.audience,
       positioning_statement: data.positioning_statement || '',
       unfair_advantage: data.unfair_advantage || '',
       voice_always: Array.isArray(data.voice_always) ? data.voice_always : [],
