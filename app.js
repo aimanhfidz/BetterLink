@@ -112,6 +112,7 @@ const state = {
   viewSlug: null,
   profile: null,          // brand system: voice, positioning, audience
   pillars: [],
+  backup: null,          // the spare brand system; at most one, see captureBackup()
   onboard: null,          // in-progress interview, see renderOnboard()
   onboardSkipped: false
 };
@@ -464,14 +465,15 @@ async function loadOwnerData(){
   state.page = page;
 
   const [{ data: links }, { data: socials }, { data: events }, { data: drafts },
-         { data: profile }, { data: pillars }] = await Promise.all([
+         { data: profile }, { data: pillars }, { data: backup }] = await Promise.all([
     sb.from('links').select('*').eq('page_id', page.id).order('sort_order'),
     sb.from('link_socials').select('*').eq('page_id', page.id).order('sort_order'),
     sb.from('link_events').select('id,kind,link_id,created_at').eq('owner_id', uid)
       .gte('created_at', new Date(Date.now() - 60*864e5).toISOString()).order('created_at', { ascending:false }).limit(5000),
     sb.from('drafts').select('*').order('created_at', { ascending:false }),
     sb.from('profiles').select('*').eq('id', uid).maybeSingle(),
-    sb.from('pillars').select('*').eq('user_id', uid).order('sort_order')
+    sb.from('pillars').select('*').eq('user_id', uid).order('sort_order'),
+    sb.from('brand_backups').select('*').maybeSingle()
   ]);
   state.links   = links   || [];
   state.socials = socials || [];
@@ -479,6 +481,7 @@ async function loadOwnerData(){
   state.drafts  = drafts  || [];
   state.profile = profile || null;
   state.pillars = pillars || [];
+  state.backup  = backup  || null;
 }
 
 async function logEvent(kind, link_id){
@@ -886,6 +889,8 @@ function renderOnboard(){
         <ul class="ob-rules">${rules(p.voice_always, 'yes')}${rules(p.voice_never, 'no')}</ul>
         ${p.language_notes ? `<p class="ob-note" style="margin-top:16px">${esc(p.language_notes)}</p>` : ''}
       </div>
+      <div class="section-title">Other brand system<span class="count">${state.backup ? 'spare' : 'none yet'}</span></div>
+      ${backupCardHTML()}
       <div class="btn-row ob-finish">
         <button class="btn lime" data-ob="finish">Start writing</button>
         ${canRebuild ? '<button class="btn ghost" data-ob="rebuild">Rebuild from my answers</button>' : ''}
@@ -930,6 +935,88 @@ function composeAudience(a){
     .join('\n');
 }
 
+/* ── The spare brand system ────────────────────────────────────────────
+   Two systems exist at a time: the live one in profiles+pillars, and one spare
+   held as jsonb in brand_backups. A primary key on user_id is what caps it at
+   two — there is no third slot to fill. Switching swaps them in a single
+   Postgres function, because putting the spare live means deleting every
+   pillar first and that must not be able to stop half-way. */
+const BACKUP_PROFILE_FIELDS = ['display_name','handle','audience','positioning_statement',
+  'unfair_advantage','voice_always','voice_never','language_notes','onboarding_completed'];
+
+async function captureBackup(profile, pillars){
+  const p = {};
+  BACKUP_PROFILE_FIELDS.forEach(k => { p[k] = profile?.[k] ?? null; });
+  const { data, error } = await sb.from('brand_backups').upsert({
+    user_id: state.session.user.id,
+    label: String(profile?.positioning_statement || '').slice(0, 200),
+    profile: p,
+    pillars: (pillars || []).map((pl, i) => ({
+      name: pl.name || '', description: pl.description || '', job: pl.job || '',
+      hooks: Array.isArray(pl.hooks) ? pl.hooks : [],
+      sort_order: typeof pl.sort_order === 'number' ? pl.sort_order : i
+    })),
+    saved_at: new Date().toISOString()
+  }).select().single();
+  if (error) throw error;
+  state.backup = data;
+  return data;
+}
+
+async function reloadBrandSystem(){
+  const uid = state.session.user.id;
+  const [{ data: profile }, { data: pillars }, { data: backup }] = await Promise.all([
+    sb.from('profiles').select('*').eq('id', uid).maybeSingle(),
+    sb.from('pillars').select('*').eq('user_id', uid).order('sort_order'),
+    sb.from('brand_backups').select('*').maybeSingle()
+  ]);
+  state.profile = profile || null;
+  state.pillars = pillars || [];
+  state.backup  = backup  || null;
+  state.editingPillar = null;
+}
+
+function backupCardHTML(){
+  const b = state.backup;
+  if (!b) return `<div class="card">
+      <p class="ob-note" style="margin-top:0">Two systems are kept at a time: the one you write with, and one spare.
+        Save this one and redoing the interview stops being a one-way door — you can switch back to it.</p>
+      <div class="btn-row"><button class="btn ghost" data-ob="backup">Save this one as the spare</button></div>
+    </div>`;
+
+  const when = new Date(b.saved_at).toLocaleDateString(undefined, { day:'numeric', month:'short', year:'numeric' });
+  const n = Array.isArray(b.pillars) ? b.pillars.length : 0;
+  return `<div class="card">
+      <div class="ob-cap">Saved ${esc(when)} · ${n} pillar${n === 1 ? '' : 's'}</div>
+      <p class="ob-note">${esc(b.profile?.positioning_statement || b.label || 'No positioning statement saved.')}</p>
+      <div class="btn-row">
+        <button class="btn lime" data-ob="swap">Switch to this one</button>
+        <button class="btn ghost" data-ob="backup">Replace it with this one</button>
+      </div>
+    </div>`;
+}
+
+async function backupNow(){
+  if (!state.profile?.onboarding_completed) return toast('Build a brand system first');
+  if (state.backup && !confirm('Replace the spare with the system you are using now? The older spare goes.')) return;
+  try {
+    await captureBackup(state.profile, state.pillars);
+    renderOnboard();
+    toast('Saved as the spare');
+  } catch (err){
+    toast('Could not save: ' + err.message);
+  }
+}
+
+async function swapBrandSystem(){
+  if (!confirm('Switch to the spare system? The one you are using now becomes the spare.')) return;
+  const { error } = await sb.rpc('swap_brand_system');
+  if (error) return toast('Switch failed: ' + error.message);
+  await reloadBrandSystem();
+  renderOnboard();
+  toast('Switched — your previous system is now the spare');
+}
+
 function obCapture(){
   const f = $('#obField');
   if (f && state.onboard?.phase === 'q'){
@@ -948,6 +1035,15 @@ async function obSubmit(){
     if (error) throw new Error(await fnError(error));
     if (data?.error) throw new Error(data.error);
     if (!Array.isArray(data?.pillars) || !data.pillars.length) throw new Error('No pillars came back. Try again.');
+
+    /* Keep the system being replaced before anything overwrites it — this is
+       what makes redoing the interview reversible. A failed capture is worth a
+       warning rather than throwing away the generation the user just waited
+       for, so it does not abort the save. */
+    if (state.profile?.onboarding_completed){
+      try { await captureBackup(state.profile, state.pillars); }
+      catch (err){ toast('Could not save a backup: ' + (err.message || 'unknown error')); }
+    }
 
     const uid = state.session.user.id;
     const { data: saved, error: pErr } = await sb.from('profiles').upsert({
@@ -1074,6 +1170,8 @@ $('#obStage').addEventListener('click', e => {
   if (act === 'skip'){ state.onboardSkipped = true; state.draftFilter = 'draft'; return show('threads'); }
   if (act === 'finish'){ state.draftFilter = 'draft'; return show('threads'); }
   if (act === 'addpillar') return addPillar();
+  if (act === 'backup') return backupNow();
+  if (act === 'swap') return swapBrandSystem();
   if (act === 'start'){ ob.phase = 'q'; ob.step = 0; return renderOnboard(); }
   if (act === 'prev'){ obCapture(); ob.step--; return renderOnboard(); }
   if (act === 'back'){ ob.phase = 'q'; ob.step = OB_Q.length - 1; return renderOnboard(); }

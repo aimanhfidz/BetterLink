@@ -37,6 +37,7 @@ BetterLink, which is the main app; the Threads tool folded into it.
 - `link_socials` — the icon row
 - `link_events` — append-only view/click log
 - `drafts` — Threads posts (pillar, day, hook, body, status)
+- `brand_backups` — the spare brand system, profile and pillars as jsonb
 - `profiles`, `pillars` — private brand strategy, owner-only. `profiles.audience`
   holds a reader avatar, not a category: the interview asks who they are, what
   they already try, what they say to themselves, and what they follow, and the
@@ -55,6 +56,18 @@ Row-level security is the whole security model:
 `public.profiles` holds private brand strategy (positioning, unfair advantage,
 voice rules) and is deliberately **not** used by the public page — it stays
 owner-read-only. Public page fields live in `link_pages` instead.
+
+Two brand systems exist at a time and no more: the live one in `profiles` +
+`pillars`, and one spare in `brand_backups`. The primary key on
+`brand_backups.user_id` is what caps it — there is no third slot to fill.
+Finishing the interview keeps the system it replaces, so redoing it is not a
+one-way door.
+
+Switching runs `swap_brand_system()` rather than a sequence of client calls.
+Putting the spare live means deleting every pillar before writing the new ones,
+and that must not be able to stop half-way; the function does it in one
+transaction. It is `security invoker`, so RLS still applies and a caller can
+only ever move their own rows.
 
 The publishable key in `app.js` is meant to ship in client code; RLS is what
 protects the data, not the key.
